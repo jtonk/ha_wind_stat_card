@@ -3,7 +3,10 @@ class HaWindStatCard extends HTMLElement {
     if (!config.wind_speed || !config.wind_gust || !config.wind_dir) {
       throw new Error('wind_speed, wind_gust and wind_dir must be set');
     }
-    this._config = config;
+    this._config = { ...config };
+    if (this._config.minutes === undefined) {
+      this._config.minutes = 30;
+    }
     if (!this.content) {
       this.content = document.createElement('div');
       this.content.className = 'container';
@@ -65,8 +68,9 @@ class HaWindStatCard extends HTMLElement {
 
   async _updateTable() {
     const ids = [this._config.wind_speed, this._config.wind_gust, this._config.wind_dir];
-    // Fetch an hour's history to ensure we get enough data
-    const start = new Date(Date.now() - 3600000).toISOString();
+    const minutesToShow = this._config.minutes;
+    // Fetch a generous history window to ensure we get enough data
+    const start = new Date(Date.now() - minutesToShow * 6 * 60000).toISOString();
     const hist = await this._hass.callApi(
       'GET',
       `history/period/${start}?filter_entity_id=${ids.join(',')}&minimal_response`
@@ -115,7 +119,7 @@ class HaWindStatCard extends HTMLElement {
       this.content.innerHTML = '';
       return;
     }
-    const startIndex = Math.max(minutes.length - 10, 0);
+    const startIndex = Math.max(minutes.length - minutesToShow, 0);
 
     let max = 0;
     for (let i = startIndex; i < minutes.length; i++) {
