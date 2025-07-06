@@ -13,14 +13,43 @@ class HaWindStatCard extends HTMLElement {
           display: block;
           padding: 16px;
         }
-        .list {
+        .graph {
           display: flex;
-          flex-direction: column;
+          align-items: flex-end;
+          height: 100px;
           width: 100%;
         }
-        .entry {
-          padding: 4px 0;
-          text-align: center;
+        .minute {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: flex-end;
+          position: relative;
+        }
+        .bars {
+          position: relative;
+          width: 100%;
+          height: 80px;
+        }
+        .bar {
+          position: absolute;
+          bottom: 0;
+          width: 60%;
+          left: 20%;
+        }
+        .speed {
+          background: #2196f3;
+        }
+        .gust {
+          background: rgba(255, 152, 0, 0.7);
+        }
+        .arrow {
+          font-size: 12px;
+          line-height: 12px;
+          height: 12px;
+          margin-bottom: 2px;
+          transform-origin: center;
         }
       `;
       this.appendChild(style);
@@ -87,21 +116,54 @@ class HaWindStatCard extends HTMLElement {
       return;
     }
     const startIndex = Math.max(minutes.length - 10, 0);
-    const list = document.createElement('div');
-    list.className = 'list';
+
+    let max = 0;
+    for (let i = startIndex; i < minutes.length; i++) {
+      const d = minuteMap[minutes[i]];
+      const s = d.speed || 0;
+      const g = d.gust || s;
+      max = Math.max(max, g);
+    }
+
+    const graph = document.createElement('div');
+    graph.className = 'graph';
+
     for (let i = startIndex; i < minutes.length; i++) {
       const m = minutes[i];
       const data = minuteMap[m];
-      const spd = data.speed !== undefined ? data.speed.toFixed(1) : '-';
-      const gst = data.gust !== undefined ? data.gust.toFixed(1) : '-';
-      const dir = data.dir !== undefined ? Math.round(data.dir) : '-';
-      const item = document.createElement('div');
-      item.className = 'entry';
-      item.textContent = `${spd}/${gst} - ${dir}`;
-      list.appendChild(item);
+      const speed = data.speed || 0;
+      const gust = data.gust || speed;
+      const dir = data.dir !== undefined ? data.dir : 0;
+      const spdHeight = (speed / max) * 100;
+      const gstHeight = (Math.max(gust - speed, 0) / max) * 100;
+
+      const minute = document.createElement('div');
+      minute.className = 'minute';
+
+      const arrow = document.createElement('div');
+      arrow.className = 'arrow';
+      arrow.textContent = '▲';
+      arrow.style.transform = `rotate(${dir}deg)`;
+      minute.appendChild(arrow);
+
+      const bars = document.createElement('div');
+      bars.className = 'bars';
+
+      const speedBar = document.createElement('div');
+      speedBar.className = 'bar speed';
+      speedBar.style.height = `${spdHeight}%`;
+      bars.appendChild(speedBar);
+
+      const gustBar = document.createElement('div');
+      gustBar.className = 'bar gust';
+      gustBar.style.height = `${spdHeight + gstHeight}%`;
+      bars.appendChild(gustBar);
+
+      minute.appendChild(bars);
+      graph.appendChild(minute);
     }
     this.content.innerHTML = '';
-    this.content.appendChild(list);
+    this.content.appendChild(graph);
   }
 
   getCardSize() {
