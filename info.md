@@ -1,5 +1,5 @@
 # ha_wind_stat_card
 
-A simple Home Assistant custom card that displays wind speed, gust, and direction as a stacked bar chart with an arrow for current direction. The card fetches history for the configured timeframe and shows up to 60 bars by default. You can adjust this with the `samples` option. The card updates whenever all three sensors update.
+A Home Assistant custom card that lists the last 10 wind speed, gust and direction values in a two-row table. The first row shows `speed/gust` for each entry, while the second row shows the wind direction. The card pulls history data for the configured sensors and updates automatically.
 
 See the repository README for installation and configuration details.
