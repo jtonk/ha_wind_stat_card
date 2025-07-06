@@ -13,13 +13,14 @@ class HaWindStatCard extends HTMLElement {
           display: block;
           padding: 16px;
         }
-        table {
+        .list {
+          display: flex;
+          flex-direction: column;
           width: 100%;
-          border-collapse: collapse;
-          text-align: center;
         }
-        td {
-          padding: 4px;
+        .entry {
+          padding: 4px 0;
+          text-align: center;
         }
       `;
       this.appendChild(style);
@@ -51,32 +52,19 @@ class HaWindStatCard extends HTMLElement {
       return;
     }
     const startIndex = Math.max(points - 10, 0);
-    const row1Values = [];
-    const row2Values = [];
+    const list = document.createElement('div');
+    list.className = 'list';
     for (let i = startIndex; i < points; i++) {
       const spd = speedHist[i].state;
       const gst = gustHist[i].state;
       const dir = dirHist[i].state;
-      row1Values.push(`${spd}/${gst}`);
-      row2Values.push(dir);
+      const item = document.createElement('div');
+      item.className = 'entry';
+      item.textContent = `${spd}/${gst} - ${dir}`;
+      list.appendChild(item);
     }
-    const table = document.createElement('table');
-    const row1 = document.createElement('tr');
-    row1Values.forEach(v => {
-      const td = document.createElement('td');
-      td.textContent = v;
-      row1.appendChild(td);
-    });
-    const row2 = document.createElement('tr');
-    row2Values.forEach(v => {
-      const td = document.createElement('td');
-      td.textContent = v;
-      row2.appendChild(td);
-    });
-    table.appendChild(row1);
-    table.appendChild(row2);
     this.content.innerHTML = '';
-    this.content.appendChild(table);
+    this.content.appendChild(list);
   }
 
   getCardSize() {
