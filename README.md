@@ -1,12 +1,12 @@
 # ha_wind_stat_card
 
-This repository contains **ha-wind-stat-card**, a simple Home Assistant custom card showing wind statistics as a stacked bar chart. It uses three entities:
+This repository contains **ha-wind-stat-card**, a Home Assistant custom card that displays the last 10 wind measurements in a simple table. It uses three entities:
 
 - `wind_speed` – wind speed sensor
 - `wind_gust` – gust sensor
 - `wind_dir` – wind direction sensor
 
-The card fetches history for the configured timeframe (default: 1 hour) and displays up to 60 stacked bars over the full width. You can change the number of bars with the optional `samples` option. An arrow below the chart indicates the current wind direction. Colors and bar rendering follow the style of `ha_wf_card` if present.
+The card fetches history for these entities and shows the most recent 10 entries. The first table row contains `speed/gust` pairs and the second row lists the corresponding wind direction values.
 
 ## Usage
 
@@ -19,15 +19,13 @@ resources:
     type: module
 ```
 
-3. Use YAML to configure the card in your dashboard:
+3. Configure the card in your dashboard:
 
 ```yaml
 type: 'custom:ha-wind-stat-card'
 wind_speed: sensor.wind_speed
 wind_gust: sensor.wind_gust
 wind_dir: sensor.wind_direction
-hours: 1  # optional timeframe
-samples: 60  # optional number of bars
 ```
 
-The card updates whenever all three sensors provide new values.
+The card automatically updates when new history data is available.
