@@ -1,0 +1,7 @@
+{
+  "name": "ha_wind_stat_card",
+  "content_in_root": true,
+  "filename": "ha-wind-stat-card.js",
+  "render_readme": true,
+  "type": "module"
+}
