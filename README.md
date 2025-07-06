@@ -1,0 +1,1 @@
+# ha_wind_stat_card
