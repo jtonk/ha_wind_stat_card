@@ -36,8 +36,8 @@ class HaWindStatCard extends HTMLElement {
 
   async _updateTable() {
     const ids = [this._config.wind_speed, this._config.wind_gust, this._config.wind_dir];
-    // Fetch a day's history to ensure we get enough data
-    const start = new Date(Date.now() - 24 * 3600000).toISOString();
+    // Fetch an hour's history to ensure we get enough data
+    const start = new Date(Date.now() - 3600000).toISOString();
     const hist = await this._hass.callApi(
       'GET',
       `history/period/${start}?filter_entity_id=${ids.join(',')}&minimal_response`
