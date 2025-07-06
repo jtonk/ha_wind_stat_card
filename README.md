@@ -1,12 +1,12 @@
 # ha_wind_stat_card
 
-This repository contains **ha-wind-stat-card**, a Home Assistant custom card that displays the last 10 wind measurements in a vertical list. It uses three entities:
+This repository contains **ha-wind-stat-card**, a Home Assistant custom card that displays the last 10 minutes of wind statistics in a vertical list. It uses three entities:
 
 - `wind_speed` – wind speed sensor
 - `wind_gust` – gust sensor
 - `wind_dir` – wind direction sensor
 
-The card fetches history for these entities and shows the most recent 10 entries. Each list item contains the `speed/gust` pair followed by the corresponding wind direction.
+The card fetches history for these entities, calculates the average value for each minute, and shows the most recent 10 minutes. Each list item contains the `speed/gust` pair followed by the corresponding wind direction.
 
 ## Usage
 
