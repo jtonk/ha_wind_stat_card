@@ -71,6 +71,10 @@ class HaWindStatCard extends HTMLElement {
     const speedHist = hist.find(h => h[0] && h[0].entity_id === this._config.wind_speed) || [];
     const gustHist = hist.find(h => h[0] && h[0].entity_id === this._config.wind_gust) || [];
 
+    const sortByTime = (a, b) => new Date(a.last_changed || a.last_updated) - new Date(b.last_changed || b.last_updated);
+    speedHist.sort(sortByTime);
+    gustHist.sort(sortByTime);
+
     const points = Math.min(speedHist.length, gustHist.length);
     if (!points) return;
     const sampleCount = Math.min(this._config.samples, points);
