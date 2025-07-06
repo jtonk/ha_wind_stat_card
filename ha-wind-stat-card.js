@@ -36,28 +36,65 @@ class HaWindStatCard extends HTMLElement {
 
   async _updateTable() {
     const ids = [this._config.wind_speed, this._config.wind_gust, this._config.wind_dir];
-    // Fetch a day's history to ensure we get at least 10 entries
+    // Fetch a day's history to ensure we get enough data
     const start = new Date(Date.now() - 24 * 3600000).toISOString();
-    const hist = await this._hass.callApi('GET', `history/period/${start}?filter_entity_id=${ids.join(',')}&minimal_response`);
+    const hist = await this._hass.callApi(
+      'GET',
+      `history/period/${start}?filter_entity_id=${ids.join(',')}&minimal_response`
+    );
     const speedHist = hist.find(h => h[0] && h[0].entity_id === this._config.wind_speed) || [];
     const gustHist = hist.find(h => h[0] && h[0].entity_id === this._config.wind_gust) || [];
     const dirHist = hist.find(h => h[0] && h[0].entity_id === this._config.wind_dir) || [];
-    const sortByTime = (a, b) => new Date(a.last_changed || a.last_updated) - new Date(b.last_changed || b.last_updated);
-    speedHist.sort(sortByTime);
-    gustHist.sort(sortByTime);
-    dirHist.sort(sortByTime);
-    const points = Math.min(speedHist.length, gustHist.length, dirHist.length);
-    if (!points) {
+
+    const avgPerMinute = (entries) => {
+      const map = {};
+      entries.forEach(e => {
+        const t = new Date(e.last_changed || e.last_updated);
+        const key = t.toISOString().slice(0, 16); // up to minute
+        const val = parseFloat(e.state);
+        if (isNaN(val)) return;
+        if (!map[key]) map[key] = { sum: 0, count: 0 };
+        map[key].sum += val;
+        map[key].count += 1;
+      });
+      const out = [];
+      Object.keys(map).forEach(k => {
+        out.push({ minute: k, avg: map[k].sum / map[k].count });
+      });
+      out.sort((a, b) => new Date(a.minute) - new Date(b.minute));
+      return out;
+    };
+
+    const speedAvg = avgPerMinute(speedHist);
+    const gustAvg = avgPerMinute(gustHist);
+    const dirAvg = avgPerMinute(dirHist);
+
+    // Combine values by minute without requiring matching timestamps
+    const minuteMap = {};
+    const addValues = (arr, prop) => {
+      arr.forEach(({ minute, avg }) => {
+        if (!minuteMap[minute]) minuteMap[minute] = {};
+        minuteMap[minute][prop] = avg;
+      });
+    };
+    addValues(speedAvg, 'speed');
+    addValues(gustAvg, 'gust');
+    addValues(dirAvg, 'dir');
+
+    const minutes = Object.keys(minuteMap).sort((a, b) => new Date(a) - new Date(b));
+    if (!minutes.length) {
       this.content.innerHTML = '';
       return;
     }
-    const startIndex = Math.max(points - 10, 0);
+    const startIndex = Math.max(minutes.length - 10, 0);
     const list = document.createElement('div');
     list.className = 'list';
-    for (let i = startIndex; i < points; i++) {
-      const spd = speedHist[i].state;
-      const gst = gustHist[i].state;
-      const dir = dirHist[i].state;
+    for (let i = startIndex; i < minutes.length; i++) {
+      const m = minutes[i];
+      const data = minuteMap[m];
+      const spd = data.speed !== undefined ? data.speed.toFixed(1) : '-';
+      const gst = data.gust !== undefined ? data.gust.toFixed(1) : '-';
+      const dir = data.dir !== undefined ? Math.round(data.dir) : '-';
       const item = document.createElement('div');
       item.className = 'entry';
       item.textContent = `${spd}/${gst} - ${dir}`;
