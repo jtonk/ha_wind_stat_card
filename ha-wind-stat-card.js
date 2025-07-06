@@ -21,6 +21,7 @@ class HaWindStatCard extends HTMLElement {
           align-items: flex-end;
           height: 100px;
           width: 100%;
+          position: relative;
         }
         .minute {
           flex: 1;
@@ -54,6 +55,20 @@ class HaWindStatCard extends HTMLElement {
           margin: 0 1px 2px;
           transform-origin: center;
           display: block;
+        }
+        .grid {
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 14px;
+          height: 80px;
+          pointer-events: none;
+        }
+        .grid-line {
+          position: absolute;
+          left: 0;
+          right: 0;
+          border-top: 1px solid rgba(0, 0, 0, 0.2);
         }
       `;
       this.appendChild(style);
@@ -132,6 +147,19 @@ class HaWindStatCard extends HTMLElement {
 
     const graph = document.createElement('div');
     graph.className = 'graph';
+
+    // Add horizontal grid lines every 5kn up to the highest bar
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    const gridStep = 5;
+    const gridMax = Math.floor(max / gridStep) * gridStep;
+    for (let v = gridStep; v <= gridMax; v += gridStep) {
+      const line = document.createElement('div');
+      line.className = 'grid-line';
+      line.style.bottom = `${(v / max) * 100}%`;
+      grid.appendChild(line);
+    }
+    graph.appendChild(grid);
 
     for (let i = startIndex; i < minutes.length; i++) {
       const m = minutes[i];
