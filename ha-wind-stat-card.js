@@ -38,8 +38,8 @@ class HaWindStatCard extends HTMLElement {
         .bar {
           position: absolute;
           bottom: 0;
-          width: 60%;
-          left: 20%;
+          width: 100%;
+          left: 0;
         }
         .speed {
           background: #2196f3;
@@ -48,8 +48,7 @@ class HaWindStatCard extends HTMLElement {
           background: rgba(255, 152, 0, 0.7);
         }
         .arrow {
-          font-size: 12px;
-          line-height: 12px;
+          width: 12px;
           height: 12px;
           margin-bottom: 2px;
           transform-origin: center;
@@ -144,9 +143,9 @@ class HaWindStatCard extends HTMLElement {
       const minute = document.createElement('div');
       minute.className = 'minute';
 
-      const arrow = document.createElement('div');
+      const arrow = document.createElement('ha-icon');
       arrow.className = 'arrow';
-      arrow.textContent = '▲';
+      arrow.setAttribute('icon', 'mdi:navigation');
       arrow.style.transform = `rotate(${dir}deg)`;
       minute.appendChild(arrow);
 
