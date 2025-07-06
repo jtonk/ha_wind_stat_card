@@ -3,7 +3,7 @@ class HaWindStatCard extends HTMLElement {
     if (!config.wind_speed || !config.wind_gust || !config.wind_dir) {
       throw new Error('wind_speed, wind_gust and wind_dir must be set');
     }
-    this._config = Object.assign({ hours: 1 }, config);
+    this._config = Object.assign({ hours: 1, samples: 60 }, config);
     this._lastSpeed = this._lastGust = this._lastDir = null;
     if (!this.content) {
       this.content = document.createElement('div');
@@ -67,18 +67,21 @@ class HaWindStatCard extends HTMLElement {
   async _updateChart() {
     const start = new Date(Date.now() - this._config.hours * 3600000).toISOString();
     const ids = [this._config.wind_speed, this._config.wind_gust];
-    const hist = await this._hass.callApi('GET', `history/period/${start}?filter_entity_id=${ids.join(',')}`);
+    const hist = await this._hass.callApi('GET', `history/period/${start}?filter_entity_id=${ids.join(',')}&minimal_response`);
     const speedHist = hist.find(h => h[0] && h[0].entity_id === this._config.wind_speed) || [];
     const gustHist = hist.find(h => h[0] && h[0].entity_id === this._config.wind_gust) || [];
 
     const points = Math.min(speedHist.length, gustHist.length);
     if (!points) return;
+    const sampleCount = Math.min(this._config.samples, points);
+    const step = points / sampleCount;
     const container = document.createElement('div');
     container.className = 'bar-container';
 
-    for (let i = 0; i < points; i++) {
-      const spd = parseFloat(speedHist[i].state);
-      const gst = parseFloat(gustHist[i].state);
+    for (let i = 0; i < sampleCount; i++) {
+      const idx = Math.floor(i * step);
+      const spd = parseFloat(speedHist[idx].state);
+      const gst = parseFloat(gustHist[idx].state);
       const max = Math.max(spd + gst, 1);
       const bar = document.createElement('div');
       bar.className = 'bar';

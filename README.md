@@ -6,7 +6,7 @@ This repository contains **ha-wind-stat-card**, a simple Home Assistant custom c
 - `wind_gust` – gust sensor
 - `wind_dir` – wind direction sensor
 
-The card fetches history for the configured timeframe (default: 1 hour) and displays stacked bars over the full width. An arrow below the chart indicates the current wind direction. Colors and bar rendering follow the style of `ha_wf_card` if present.
+The card fetches history for the configured timeframe (default: 1 hour) and displays up to 60 stacked bars over the full width. You can change the number of bars with the optional `samples` option. An arrow below the chart indicates the current wind direction. Colors and bar rendering follow the style of `ha_wf_card` if present.
 
 ## Usage
 
@@ -27,6 +27,7 @@ wind_speed: sensor.wind_speed
 wind_gust: sensor.wind_gust
 wind_dir: sensor.wind_direction
 hours: 1  # optional timeframe
+samples: 60  # optional number of bars
 ```
 
 The card updates whenever all three sensors provide new values.
