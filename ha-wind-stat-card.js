@@ -1,7 +1,5 @@
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
-const Y_MAX = 60; // knots
-
 class HaWindStatCard extends LitElement {
   static properties = {
     hass: {},
@@ -58,12 +56,7 @@ class HaWindStatCard extends LitElement {
           map[key].sum += val;
           map[key].count += 1;
         });
-        const out = [];
-        Object.keys(map).forEach(k => {
-          out.push({ minute: k, avg: map[k].sum / map[k].count });
-        });
-        out.sort((a, b) => new Date(a.minute) - new Date(b.minute));
-        return out;
+        return Object.keys(map).sort().map(k => ({ minute: k, avg: map[k].sum / map[k].count }));
       };
 
       const windAvg = avgPerMinute(windHist);
@@ -101,24 +94,29 @@ class HaWindStatCard extends LitElement {
     }
   }
 
-  _getSpeedClass(speed) {
-    const level = Math.min(60, Math.floor(speed / 5) * 5);
-    return `ws${level}`;
+  _getColor(speed) {
+    const wsColors = [
+      "#9700ff", "#6400ff", "#3200ff", "#0032ff", "#0064ff", "#0096ff", "#00c7ff",
+      "#00e6f0", "#25c192", "#11d411", "#00e600", "#00fa00", "#b8ff61", "#fffe00",
+      "#ffe100", "#ffc800", "#ffaf00", "#ff9600", "#e67d00", "#e66400", "#dc4a1d",
+      "#c8321d", "#b4191d", "#aa001d", "#b40032", "#c80064", "#fe0096"
+    ];
+    const index = Math.min(wsColors.length - 1, Math.floor(speed / 2));
+    return wsColors[index];
   }
 
   _renderBar({ wind, gust }) {
-    const base = Math.min(wind, Y_MAX);
-    const peak = Math.min(gust, Y_MAX);
-    const speedHeight = (base / Y_MAX) * 100;
-    const gustHeight = ((peak - base) / Y_MAX) * 100;
-
-    const windClass = this._getSpeedClass(base);
-    const gustClass = this._getSpeedClass(peak);
+    const windHeight = Math.round(wind);
+    const gustHeight = Math.max(0, Math.round(gust - wind));
+    const colorWind = this._getColor(wind);
+    const colorGust = this._getColor(gust);
 
     return html`
-      <div class="bar-container">
-        <div class="bar wind ${windClass}" style="height:${speedHeight}%"></div>
-        <div class="bar gust ${gustClass}" style="height:${gustHeight}%; bottom:${speedHeight}%"></div>
+      <div class="wind-bar-segment">
+        <div class="date-wind-bar-segment" style="background:${colorWind};height:${windHeight}px;width:100%;display:inline-block;"></div>
+        ${gustHeight > 0
+          ? html`<div class="date-gust-bar-segment" style="background:${colorGust};height:1px;margin-bottom:${gustHeight}px;width:100%;display:inline-block;"></div>`
+          : null}
       </div>
     `;
   }
@@ -127,15 +125,9 @@ class HaWindStatCard extends LitElement {
     if (this._noData) {
       return html`<ha-card class="no-data">${this._error || 'No data available'}</ha-card>`;
     }
-    const lines = [];
-    const gridLimit = Math.min(Y_MAX, Math.floor(this._maxGust / 5) * 5);
-    for (let v = 5; v <= gridLimit; v += 5) {
-      lines.push(html`<div class="grid-line" style="bottom:${(v / Y_MAX) * 100}%"></div>`);
-    }
     return html`
       <ha-card>
-        <div class="graph" style="grid-template-columns:repeat(${this._data.length},1fr)">
-          <div class="grid">${lines}</div>
+        <div class="graph">
           ${this._data.map(d => this._renderBar(d))}
         </div>
         <div class="footer">Updated: ${this._lastUpdated?.toLocaleTimeString()}</div>
@@ -148,61 +140,29 @@ class HaWindStatCard extends LitElement {
       display: block;
     }
     .graph {
-      height: 100px;
-      position: relative;
-      display: grid;
-      grid-auto-flow: column;
+      display: flex;
       align-items: end;
+      height: 100px;
+      gap: 1px;
     }
-    .grid {
-      position: absolute;
-      inset: 0 0 0 0;
-      pointer-events: none;
-    }
-    .grid-line {
-      position: absolute;
-      left: 0;
-      right: 0;
-      border-top: 1px solid var(--divider-color, #e0e0e0);
-    }
-    .bar-container {
+    .wind-bar-segment {
       position: relative;
       height: 100%;
-    }
-    .bar {
-      position: absolute;
-      left: 0;
       width: 100%;
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: stretch;
     }
-    .wind {
-      bottom: 0;
+    .date-wind-bar-segment,
+    .date-gust-bar-segment {
+      display: inline-block;
     }
-    .gust {
-      opacity: 0.6;
-    }
-
-    /* Windfinder-style color scale */
-    .ws0  { background-color: #00bfff; }
-    .ws5  { background-color: #1eb7e6; }
-    .ws10 { background-color: #4ca6d1; }
-    .ws15 { background-color: #7994bd; }
-    .ws20 { background-color: #a681a8; }
-    .ws25 { background-color: #d46f94; }
-    .ws30 { background-color: #ff5c7f; }
-    .ws35 { background-color: #ff6f61; }
-    .ws40 { background-color: #ff944d; }
-    .ws45 { background-color: #ffb833; }
-    .ws50 { background-color: #ffdb19; }
-    .ws55 { background-color: #ffff00; }
-    .ws60 { background-color: #e6e600; }
-
     .footer {
       text-align: center;
       font-size: 0.8em;
       padding: 8px 0;
       color: var(--secondary-text-color);
     }
-
     ha-card.no-data {
       padding: 16px;
       text-align: center;
