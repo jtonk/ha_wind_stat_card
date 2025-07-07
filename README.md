@@ -1,17 +1,24 @@
 # ha_wind_stat_card
 
-This repository contains **ha-wind-stat-card**, a Home Assistant custom card that shows the last minutes of wind statistics (30 by default) as a small bar graph. Each minute is represented as a column where the wind speed is drawn as a bar and the gust height is stacked on top. Bars always fill the width of the card and animate when new data arrives. A small arrow rotated in the direction of the wind replaces the numeric direction. The card uses three entities:
+`ha-wind-stat-card` is a lightweight Home Assistant custom card that renders recent wind data as a stacked bar chart. Each bar represents a one‑minute average of wind speed with the gust height stacked on top.
 
-- `wind_speed` – wind speed sensor
-- `wind_gust` – gust sensor
-- `wind_dir` – wind direction sensor
+The card loads data through the Home Assistant history API and refreshes itself every minute. It is fully themeable using built‑in Home Assistant theme variables.
 
-The card fetches history for these entities, calculates the average value for each minute, and shows the most recent configured number of minutes (30 by default). Each list item contains the `speed/gust` pair followed by the corresponding wind direction.
+## Features
+
+- Fetches last N minutes of history (default: 30)
+- Stacked bars showing wind speed with gusts on top
+- Y‑axis from 0–60 kn with grid lines every 5 kn (only up to current max gust)
+- Auto refreshes once per minute and shows the last updated time
+- Works with two sensors configured in YAML:
+  - `wind_entity`
+  - `gust_entity`
+- Fallback message when no data is available
 
 ## Usage
 
-1. Copy `ha-wind-stat-card.js` to your `www` folder in Home Assistant.
-2. Add the card to your Lovelace resources:
+1. Copy `ha-wind-stat-card.js` to your `www` folder.
+2. Add it as a resource in Lovelace:
 
 ```yaml
 resources:
@@ -19,15 +26,14 @@ resources:
     type: module
 ```
 
-3. Configure the card in your dashboard:
+3. Add the card to your dashboard:
 
 ```yaml
 type: 'custom:ha-wind-stat-card'
-wind_speed: sensor.wind_speed
-wind_gust: sensor.wind_gust
-wind_dir: sensor.wind_direction
-# Optional: number of minutes to display (defaults to 30)
+wind_entity: sensor.wind_speed
+gust_entity: sensor.wind_gust
+# Optional number of minutes (defaults to 30)
 minutes: 45
 ```
 
-The card automatically updates when new history data is available.
+The card will automatically load history and update every minute.

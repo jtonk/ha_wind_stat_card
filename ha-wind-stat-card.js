@@ -1,287 +1,185 @@
-function averageAnglesDeg(angles) {
-  const radians = angles.map(a => a * Math.PI / 180);
-  const sumX = radians.reduce((acc, a) => acc + Math.cos(a), 0);
-  const sumY = radians.reduce((acc, a) => acc + Math.sin(a), 0);
-  const avgAngleRad = Math.atan2(sumY / angles.length, sumX / angles.length);
-  const avgAngleDeg = (avgAngleRad * 180 / Math.PI + 360) % 360;
-  return avgAngleDeg;
-}
+import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
-class HaWindStatCard extends HTMLElement {
+const Y_MAX = 60; // knots
+
+class HaWindStatCard extends LitElement {
+  static properties = {
+    hass: {},
+    _config: {},
+    _data: { state: true },
+    _maxGust: { state: true },
+    _lastUpdated: { state: true },
+    _noData: { state: true }
+  };
+
   setConfig(config) {
-    if (!config.wind_speed || !config.wind_gust || !config.wind_dir) {
-      throw new Error('wind_speed, wind_gust and wind_dir must be set');
+    if (!config.wind_entity || !config.gust_entity) {
+      throw new Error('wind_entity and gust_entity must be set');
     }
-    this._config = { ...config };
-    if (this._config.minutes === undefined) {
-      this._config.minutes = 30;
-    }
-    if (!this.content) {
-      this.content = document.createElement('div');
-      this.content.className = 'container';
-      const style = document.createElement('style');
-      style.textContent = `
-        :host {
-          display: block;
-          padding: 16px 0;
-        }
-        .graph {
-          display: grid;
-          align-items: flex-end;
-          height: 100px;
-          width: 100%;
-          position: relative;
-        }
-        .minute {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: flex-end;
-          position: relative;
-        }
-        .bars {
-          position: relative;
-          width: 100%;
-          height: 80px;
-        }
-        .bar {
-          position: absolute;
-          bottom: 0;
-          width: 100%;
-          left: 0;
-        }
-        .speed {
-          background: #2196f3;
-        }
-        .gust {
-          background: rgba(255, 152, 0, 0.7);
-        }
-        .arrow {
-          width: 100%;
-          height: 12px;
-          margin: 0 auto 2px;
-          transform-origin: center;
-          display: block;
-        }
-        .grid {
-          position: absolute;
-          left: 0;
-          right: 0;
-          bottom: 14px;
-          height: 80px;
-          pointer-events: none;
-        }
-        .grid-line {
-          position: absolute;
-          left: 0;
-          right: 0;
-          border-top: 1px solid rgba(0, 0, 0, 0.2);
-        }
-      `;
-      this.appendChild(style);
-      this.appendChild(this.content);
-    }
+    this._config = { minutes: 30, ...config };
   }
 
-  set hass(hass) {
-    this._hass = hass;
-    if (!this._config) return;
-    this._updateTable();
+  connectedCallback() {
+    super.connectedCallback();
+    this._fetchData();
+    this._interval = setInterval(() => this._fetchData(), 60000);
   }
 
-  async _updateTable() {
-    const ids = [this._config.wind_speed, this._config.wind_gust, this._config.wind_dir];
-    const minutesToShow = this._config.minutes;
-    this._prevDirs = this._prevDirs || {};
-    const start = new Date(Date.now() - minutesToShow * 60000).toISOString();
-    const hist = await this._hass.callApi(
-      'GET',
-      `history/period/${start}?filter_entity_id=${ids.join(',')}&minimal_response`
-    );
-    const speedHist = hist.find(h => h[0] && h[0].entity_id === this._config.wind_speed) || [];
-    const gustHist = hist.find(h => h[0] && h[0].entity_id === this._config.wind_gust) || [];
-    const dirHist = hist.find(h => h[0] && h[0].entity_id === this._config.wind_dir) || [];
-
-    const avgPerMinute = (entries) => {
-      const map = {};
-      entries.forEach(e => {
-        const t = new Date(e.last_changed || e.last_updated);
-        const key = t.toISOString().slice(0, 16);
-        const val = parseFloat(e.state);
-        if (isNaN(val)) return;
-        if (!map[key]) map[key] = { sum: 0, count: 0 };
-        map[key].sum += val;
-        map[key].count += 1;
-      });
-      const out = [];
-      Object.keys(map).forEach(k => {
-        out.push({ minute: k, avg: map[k].sum / map[k].count });
-      });
-      out.sort((a, b) => new Date(a.minute) - new Date(b.minute));
-      return out;
-    };
-
-    const avgAnglesPerMinute = (entries) => {
-      const map = {};
-      entries.forEach(e => {
-        const t = new Date(e.last_changed || e.last_updated);
-        const key = t.toISOString().slice(0, 16);
-        const val = parseFloat(e.state);
-        if (isNaN(val)) return;
-        if (!map[key]) map[key] = [];
-        map[key].push(val);
-      });
-      const out = [];
-      Object.keys(map).forEach(k => {
-        out.push({ minute: k, avg: averageAnglesDeg(map[k]) });
-      });
-      out.sort((a, b) => new Date(a.minute) - new Date(b.minute));
-      return out;
-    };
-
-    const speedAvg = avgPerMinute(speedHist);
-    const gustAvg = avgPerMinute(gustHist);
-    const dirAvg = avgAnglesPerMinute(dirHist);
-
-    const minuteMap = {};
-    const addValues = (arr, prop) => {
-      arr.forEach(({ minute, avg }) => {
-        if (!minuteMap[minute]) minuteMap[minute] = {};
-        minuteMap[minute][prop] = avg;
-      });
-    };
-    addValues(speedAvg, 'speed');
-    addValues(gustAvg, 'gust');
-    addValues(dirAvg, 'dir');
-
-    const now = new Date();
-    const data = [];
-    let max = 0;
-    for (let i = minutesToShow - 1; i >= 0; i--) {
-      const mTime = new Date(now.getTime() - i * 60000);
-      const key = mTime.toISOString().slice(0, 16);
-      const d = minuteMap[key] || {};
-      const speed = d.speed || 0;
-      const gust = d.gust !== undefined ? d.gust : speed;
-      const dir = d.dir !== undefined ? d.dir : undefined;
-      max = Math.max(max, gust);
-      data.push({ key, speed, gust, dir });
-    }
-    this._max = max || 1;
-    this._data = data;
-  this._renderGraph();
+  disconnectedCallback() {
+    clearInterval(this._interval);
+    super.disconnectedCallback();
   }
 
-  _renderGraph() {
-    if (!this._data) return;
-    const minutesToShow = this._config.minutes;
-    const graph = this._graph || document.createElement('div');
-    graph.className = 'graph';
-    graph.style.gridTemplateColumns = `repeat(${minutesToShow}, 1fr)`;
+  async _fetchData() {
+    if (!this.hass || !this._config) return;
+    const minutes = this._config.minutes;
+    const start = new Date(Date.now() - minutes * 60000).toISOString();
+    const ids = `${this._config.wind_entity},${this._config.gust_entity}`;
+    try {
+      const hist = await this.hass.callApi(
+        'GET',
+        `history/period/${start}?filter_entity_id=${ids}&minimal_response`
+      );
+      const windHist = hist.find(h => h[0]?.entity_id === this._config.wind_entity) || [];
+      const gustHist = hist.find(h => h[0]?.entity_id === this._config.gust_entity) || [];
 
-    // create grid lines
-    const grid = this._grid || document.createElement('div');
-    grid.className = 'grid';
-    while (grid.firstChild) grid.removeChild(grid.firstChild);
-    const gridStep = 5;
-    const gridMax = Math.floor(this._max / gridStep) * gridStep;
-    for (let v = gridStep; v <= gridMax; v += gridStep) {
-      const line = document.createElement('div');
-      line.className = 'grid-line';
-      line.style.bottom = `${(v / this._max) * 100}%`;
-      grid.appendChild(line);
-    }
-    if (!this._grid) {
-      graph.appendChild(grid);
-      this._grid = grid;
-    }
+      this._noData = !windHist.length && !gustHist.length;
 
-    this._bars = this._bars || [];
-    this._prevDirs = this._prevDirs || {};
-
-    for (let i = 0; i < this._data.length; i++) {
-      const { key, speed, gust, dir } = this._data[i];
-      const spdHeight = (speed / this._max) * 100;
-      const gstHeight = (Math.max(gust - speed, 0) / this._max) * 100;
-
-      let wrap = this._bars[i];
-      if (!wrap) {
-        wrap = document.createElement('div');
-        wrap.className = 'minute';
-
-        const arrow = document.createElement('ha-icon');
-        arrow.className = 'arrow';
-        arrow.setAttribute('icon', 'mdi:navigation');
-        wrap.appendChild(arrow);
-
-        const bars = document.createElement('div');
-        bars.className = 'bars';
-
-        const speedBar = document.createElement('div');
-        speedBar.className = 'bar speed';
-        bars.appendChild(speedBar);
-
-        const gustBar = document.createElement('div');
-        gustBar.className = 'bar gust';
-        bars.appendChild(gustBar);
-
-        wrap.appendChild(bars);
-        this._bars[i] = wrap;
-        if (graph.children.length <= i + 1) {
-          graph.appendChild(wrap);
-        } else {
-          graph.insertBefore(wrap, graph.children[i + 1]);
-        }
-      }
-
-      const arrow = wrap.querySelector('.arrow');
-      const speedBar = wrap.querySelector('.speed');
-      const gustBar = wrap.querySelector('.gust');
-
-      const prevDir = this._prevDirs[key];
-      const startDir = prevDir !== undefined ? prevDir : (dir !== undefined ? dir : 0);
-      const endDir = dir !== undefined ? startDir + (((dir - startDir + 540) % 360) - 180) : startDir;
-      arrow.style.transform = `rotate(${startDir + 180}deg)`;
-      requestAnimationFrame(() => {
-        arrow.animate(
-          [
-            { transform: `rotate(${startDir + 180}deg)` },
-            { transform: `rotate(${endDir + 180}deg)` }
-          ],
-          { duration: 500, fill: 'forwards' }
-        );
-      });
-      this._prevDirs[key] = ((endDir % 360) + 360) % 360;
-
-      const animateHeight = (el, value) => {
-        const from = el.style.height || '0%';
-        el.animate([
-          { height: from },
-          { height: `${value}%` }
-        ], { duration: 500, fill: 'forwards' });
-        el.style.height = `${value}%`;
+      const avgPerMinute = entries => {
+        const map = {};
+        entries.forEach(e => {
+          const t = new Date(e.last_changed || e.last_updated);
+          const key = t.toISOString().slice(0, 16);
+          const val = parseFloat(e.state);
+          if (isNaN(val)) return;
+          if (!map[key]) map[key] = { sum: 0, count: 0 };
+          map[key].sum += val;
+          map[key].count += 1;
+        });
+        const out = [];
+        Object.keys(map).forEach(k => {
+          out.push({ minute: k, avg: map[k].sum / map[k].count });
+        });
+        out.sort((a, b) => new Date(a.minute) - new Date(b.minute));
+        return out;
       };
 
-      animateHeight(speedBar, spdHeight);
-      animateHeight(gustBar, spdHeight + gstHeight);
-    }
+      const windAvg = avgPerMinute(windHist);
+      const gustAvg = avgPerMinute(gustHist);
 
-    // remove extra bars if minutes decreased
-    while (this._bars.length > this._data.length) {
-      const old = this._bars.pop();
-      old.remove();
-    }
+      const minuteMap = {};
+      windAvg.forEach(({ minute, avg }) => {
+        if (!minuteMap[minute]) minuteMap[minute] = {};
+        minuteMap[minute].wind = avg;
+      });
+      gustAvg.forEach(({ minute, avg }) => {
+        if (!minuteMap[minute]) minuteMap[minute] = {};
+        minuteMap[minute].gust = avg;
+      });
 
-    if (!this._graph) {
-      this.content.innerHTML = '';
-      this.content.appendChild(graph);
-      this._graph = graph;
+      const now = new Date();
+      const data = [];
+      let max = 0;
+      for (let i = minutes - 1; i >= 0; i--) {
+        const mTime = new Date(now.getTime() - i * 60000);
+        const key = mTime.toISOString().slice(0, 16);
+        const wind = minuteMap[key]?.wind ?? 0;
+        const gust = minuteMap[key]?.gust ?? wind;
+        max = Math.max(max, gust);
+        data.push({ wind, gust });
+      }
+      this._data = data;
+      this._maxGust = max;
+      this._lastUpdated = new Date();
+    } catch (err) {
+      this._data = [];
+      this._maxGust = 0;
+      this._noData = true;
+      // eslint-disable-next-line no-console
+      console.error('Failed to fetch wind data', err);
     }
   }
 
-  getCardSize() {
-    return 2;
+  render() {
+    if (this._noData) {
+      return html`<ha-card class="no-data">No data available</ha-card>`;
+    }
+    const lines = [];
+    const gridLimit = Math.min(Y_MAX, Math.floor(this._maxGust / 5) * 5);
+    for (let v = 5; v <= gridLimit; v += 5) {
+      lines.push(html`<div class="grid-line" style="bottom:${(v / Y_MAX) * 100}%"></div>`);
+    }
+    return html`
+      <ha-card>
+        <div class="graph" style="grid-template-columns:repeat(${this._data.length},1fr)">
+          <div class="grid">${lines}</div>
+          ${this._data.map(d => this._renderBar(d))}
+        </div>
+        <div class="footer">Updated: ${this._lastUpdated?.toLocaleTimeString()}</div>
+      </ha-card>
+    `;
   }
+
+  _renderBar({ wind, gust }) {
+    const speedHeight = Math.min(wind, Y_MAX) / Y_MAX * 100;
+    const gustDiff = Math.max(0, Math.min(gust, Y_MAX) - Math.min(wind, Y_MAX));
+    const gustHeight = gustDiff / Y_MAX * 100;
+    return html`
+      <div class="bar-container">
+        <div class="bar speed" style="height:${speedHeight}%"></div>
+        <div class="bar gust" style="height:${gustHeight}%; bottom:${speedHeight}%"></div>
+      </div>
+    `;
+  }
+
+  static styles = css`
+    :host {
+      display: block;
+    }
+    .graph {
+      height: 100px;
+      position: relative;
+      display: grid;
+      align-items: end;
+    }
+    .grid {
+      position: absolute;
+      inset: 0 0 0 0;
+      pointer-events: none;
+    }
+    .grid-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      border-top: 1px solid var(--divider-color, #e0e0e0);
+    }
+    .bar-container {
+      position: relative;
+      height: 100%;
+    }
+    .bar {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      bottom: 0;
+    }
+    .speed {
+      background-color: var(--primary-color);
+    }
+    .gust {
+      background-color: var(--accent-color);
+    }
+    .footer {
+      text-align: center;
+      font-size: 0.8em;
+      padding: 8px 0;
+      color: var(--secondary-text-color);
+    }
+    ha-card.no-data {
+      padding: 16px;
+      text-align: center;
+    }
+  `;
 }
 
 customElements.define('ha-wind-stat-card', HaWindStatCard);
