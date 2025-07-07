@@ -14,7 +14,9 @@ class HaWindStatCard extends LitElement {
 
   setConfig(config) {
     if (!config.wind_entity || !config.gust_entity) {
-      throw new Error('wind_entity and gust_entity must be set');
+      this._noData = true;
+      this._error = 'wind_entity and gust_entity must be set';
+      return;
     }
     this._config = { minutes: 30, ...config };
   }
@@ -95,14 +97,37 @@ class HaWindStatCard extends LitElement {
       this._data = [];
       this._maxGust = 0;
       this._noData = true;
-      // eslint-disable-next-line no-console
       console.error('Failed to fetch wind data', err);
     }
   }
 
+  _getSpeedClass(speed) {
+    const level = Math.min(60, Math.floor(speed / 5) * 5);
+    return `ws${level}`;
+  }
+
+  _renderBar({ wind, gust }) {
+    const cappedGust = Math.min(gust, Y_MAX);
+    const height = cappedGust / Y_MAX * 100;
+
+    // Create stacked colored layers from 0 to gust, step 5
+    const segments = [];
+    for (let s = 0; s < cappedGust; s += 5) {
+      const from = s;
+      const to = Math.min(cappedGust, s + 5);
+      const segHeight = ((to - from) / Y_MAX) * 100;
+      const segClass = this._getSpeedClass(to);
+      segments.push(html`
+        <div class="bar ${segClass}" style="height:${segHeight}%; bottom:${(from / Y_MAX) * 100}%"></div>
+      `);
+    }
+
+    return html`<div class="bar-container">${segments}</div>`;
+  }
+
   render() {
     if (this._noData) {
-      return html`<ha-card class="no-data">No data available</ha-card>`;
+      return html`<ha-card class="no-data">${this._error || 'No data available'}</ha-card>`;
     }
     const lines = [];
     const gridLimit = Math.min(Y_MAX, Math.floor(this._maxGust / 5) * 5);
@@ -117,18 +142,6 @@ class HaWindStatCard extends LitElement {
         </div>
         <div class="footer">Updated: ${this._lastUpdated?.toLocaleTimeString()}</div>
       </ha-card>
-    `;
-  }
-
-  _renderBar({ wind, gust }) {
-    const speedHeight = Math.min(wind, Y_MAX) / Y_MAX * 100;
-    const gustDiff = Math.max(0, Math.min(gust, Y_MAX) - Math.min(wind, Y_MAX));
-    const gustHeight = gustDiff / Y_MAX * 100;
-    return html`
-      <div class="bar-container">
-        <div class="bar speed" style="height:${speedHeight}%"></div>
-        <div class="bar gust" style="height:${gustHeight}%; bottom:${speedHeight}%"></div>
-      </div>
     `;
   }
 
@@ -162,20 +175,30 @@ class HaWindStatCard extends LitElement {
       position: absolute;
       left: 0;
       width: 100%;
-      bottom: 0;
     }
-    .speed {
-      background-color: var(--primary-color);
-    }
-    .gust {
-      background-color: var(--accent-color);
-    }
+
+    /* Windfinder-style color scale */
+    .ws0  { background-color: #00bfff; }
+    .ws5  { background-color: #1eb7e6; }
+    .ws10 { background-color: #4ca6d1; }
+    .ws15 { background-color: #7994bd; }
+    .ws20 { background-color: #a681a8; }
+    .ws25 { background-color: #d46f94; }
+    .ws30 { background-color: #ff5c7f; }
+    .ws35 { background-color: #ff6f61; }
+    .ws40 { background-color: #ff944d; }
+    .ws45 { background-color: #ffb833; }
+    .ws50 { background-color: #ffdb19; }
+    .ws55 { background-color: #ffff00; }
+    .ws60 { background-color: #e6e600; }
+
     .footer {
       text-align: center;
       font-size: 0.8em;
       padding: 8px 0;
       color: var(--secondary-text-color);
     }
+
     ha-card.no-data {
       padding: 16px;
       text-align: center;
