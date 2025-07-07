@@ -1,6 +1,6 @@
 # ha_wind_stat_card
 
-This repository contains **ha-wind-stat-card**, a Home Assistant custom card that shows the last minutes of wind statistics (30 by default) as a small bar graph. Each minute is represented as a column where the wind speed is drawn as a bar and the gust height is stacked on top. A small arrow rotated in the direction of the wind replaces the numeric direction. The card uses three entities:
+This repository contains **ha-wind-stat-card**, a Home Assistant custom card that shows the last minutes of wind statistics (30 by default) as a small bar graph. Each minute is represented as a column where the wind speed is drawn as a bar and the gust height is stacked on top. Bars always fill the width of the card and animate when new data arrives. A small arrow rotated in the direction of the wind replaces the numeric direction. The card uses three entities:
 
 - `wind_speed` – wind speed sensor
 - `wind_gust` – gust sensor
