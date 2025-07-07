@@ -1,3 +1,12 @@
+function averageAnglesDeg(angles) {
+  const radians = angles.map(a => a * Math.PI / 180);
+  const sumX = radians.reduce((acc, a) => acc + Math.cos(a), 0);
+  const sumY = radians.reduce((acc, a) => acc + Math.sin(a), 0);
+  const avgAngleRad = Math.atan2(sumY / angles.length, sumX / angles.length);
+  const avgAngleDeg = (avgAngleRad * 180 / Math.PI + 360) % 360;
+  return avgAngleDeg;
+}
+
 class HaWindStatCard extends HTMLElement {
   setConfig(config) {
     if (!config.wind_speed || !config.wind_gust || !config.wind_dir) {
@@ -22,20 +31,22 @@ class HaWindStatCard extends HTMLElement {
           height: 100px;
           width: 100%;
           position: relative;
+          justify-content: center;
         }
         .minute {
-          flex: 1;
+          flex: none;
+          width: var(--bar-width, 12px);
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: flex-end;
           position: relative;
+          margin: 0 1px;
         }
         .bars {
           position: relative;
-          width: calc(100% - 2px);
+          width: 100%;
           height: 80px;
-          margin: 0 1px;
         }
         .bar {
           position: absolute;
@@ -50,9 +61,9 @@ class HaWindStatCard extends HTMLElement {
           background: rgba(255, 152, 0, 0.7);
         }
         .arrow {
-          width: calc(100% - 2px);
+          width: 100%;
           height: 12px;
-          margin: 0 1px 2px;
+          margin: 0 auto 2px;
           transform-origin: center;
           display: block;
         }
@@ -85,6 +96,7 @@ class HaWindStatCard extends HTMLElement {
   async _updateTable() {
     const ids = [this._config.wind_speed, this._config.wind_gust, this._config.wind_dir];
     const minutesToShow = this._config.minutes;
+    this._prevDirs = this._prevDirs || {};
     // Fetch a generous history window to ensure we get enough data
     const start = new Date(Date.now() - minutesToShow * 6 * 60000).toISOString();
     const hist = await this._hass.callApi(
@@ -114,9 +126,27 @@ class HaWindStatCard extends HTMLElement {
       return out;
     };
 
+    const avgAnglesPerMinute = (entries) => {
+      const map = {};
+      entries.forEach(e => {
+        const t = new Date(e.last_changed || e.last_updated);
+        const key = t.toISOString().slice(0, 16);
+        const val = parseFloat(e.state);
+        if (isNaN(val)) return;
+        if (!map[key]) map[key] = [];
+        map[key].push(val);
+      });
+      const out = [];
+      Object.keys(map).forEach(k => {
+        out.push({ minute: k, avg: averageAnglesDeg(map[k]) });
+      });
+      out.sort((a, b) => new Date(a.minute) - new Date(b.minute));
+      return out;
+    };
+
     const speedAvg = avgPerMinute(speedHist);
     const gustAvg = avgPerMinute(gustHist);
-    const dirAvg = avgPerMinute(dirHist);
+    const dirAvg = avgAnglesPerMinute(dirHist);
 
     // Combine values by minute without requiring matching timestamps
     const minuteMap = {};
@@ -136,6 +166,7 @@ class HaWindStatCard extends HTMLElement {
       return;
     }
     const startIndex = Math.max(minutes.length - minutesToShow, 0);
+    const visibleMinutes = minutes.slice(startIndex);
 
     let max = 0;
     for (let i = startIndex; i < minutes.length; i++) {
@@ -176,7 +207,21 @@ class HaWindStatCard extends HTMLElement {
       const arrow = document.createElement('ha-icon');
       arrow.className = 'arrow';
       arrow.setAttribute('icon', 'mdi:navigation');
-      arrow.style.transform = `rotate(${dir + 180}deg)`;
+      const prev = this._prevDirs[m];
+      const startDir = prev !== undefined ? prev : dir;
+      const diff = ((dir - startDir + 540) % 360) - 180;
+      const endDir = startDir + diff;
+      arrow.style.transform = `rotate(${startDir + 180}deg)`;
+      requestAnimationFrame(() => {
+        arrow.animate(
+          [
+            { transform: `rotate(${startDir + 180}deg)` },
+            { transform: `rotate(${endDir + 180}deg)` }
+          ],
+          { duration: 500, fill: 'forwards' }
+        );
+      });
+      this._prevDirs[m] = ((endDir % 360) + 360) % 360;
       minute.appendChild(arrow);
 
       const bars = document.createElement('div');
@@ -197,6 +242,9 @@ class HaWindStatCard extends HTMLElement {
     }
     this.content.innerHTML = '';
     this.content.appendChild(graph);
+    Object.keys(this._prevDirs).forEach(k => {
+      if (!visibleMinutes.includes(k)) delete this._prevDirs[k];
+    });
   }
 
   getCardSize() {
