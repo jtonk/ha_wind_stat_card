@@ -107,22 +107,20 @@ class HaWindStatCard extends LitElement {
   }
 
   _renderBar({ wind, gust }) {
-    const cappedGust = Math.min(gust, Y_MAX);
-    const height = cappedGust / Y_MAX * 100;
+    const base = Math.min(wind, Y_MAX);
+    const peak = Math.min(gust, Y_MAX);
+    const speedHeight = (base / Y_MAX) * 100;
+    const gustHeight = ((peak - base) / Y_MAX) * 100;
 
-    // Create stacked colored layers from 0 to gust, step 5
-    const segments = [];
-    for (let s = 0; s < cappedGust; s += 5) {
-      const from = s;
-      const to = Math.min(cappedGust, s + 5);
-      const segHeight = ((to - from) / Y_MAX) * 100;
-      const segClass = this._getSpeedClass(to);
-      segments.push(html`
-        <div class="bar ${segClass}" style="height:${segHeight}%; bottom:${(from / Y_MAX) * 100}%"></div>
-      `);
-    }
+    const windClass = this._getSpeedClass(base);
+    const gustClass = this._getSpeedClass(peak);
 
-    return html`<div class="bar-container">${segments}</div>`;
+    return html`
+      <div class="bar-container">
+        <div class="bar wind ${windClass}" style="height:${speedHeight}%"></div>
+        <div class="bar gust ${gustClass}" style="height:${gustHeight}%; bottom:${speedHeight}%"></div>
+      </div>
+    `;
   }
 
   render() {
@@ -175,6 +173,12 @@ class HaWindStatCard extends LitElement {
       position: absolute;
       left: 0;
       width: 100%;
+    }
+    .wind {
+      bottom: 0;
+    }
+    .gust {
+      opacity: 0.6;
     }
 
     /* Windfinder-style color scale */
