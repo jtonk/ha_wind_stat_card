@@ -140,6 +140,7 @@ class HaWindStatCard extends LitElement {
       height: 100px;
       position: relative;
       display: grid;
+      grid-auto-flow: column;
       align-items: end;
     }
     .grid {
