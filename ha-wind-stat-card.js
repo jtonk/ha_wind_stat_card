@@ -26,22 +26,18 @@ class HaWindStatCard extends HTMLElement {
           padding: 16px 0;
         }
         .graph {
-          display: flex;
+          display: grid;
           align-items: flex-end;
           height: 100px;
           width: 100%;
           position: relative;
-          justify-content: center;
         }
         .minute {
-          flex: none;
-          width: var(--bar-width, 12px);
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: flex-end;
           position: relative;
-          margin: 0 1px;
         }
         .bars {
           position: relative;
@@ -97,8 +93,7 @@ class HaWindStatCard extends HTMLElement {
     const ids = [this._config.wind_speed, this._config.wind_gust, this._config.wind_dir];
     const minutesToShow = this._config.minutes;
     this._prevDirs = this._prevDirs || {};
-    // Fetch a generous history window to ensure we get enough data
-    const start = new Date(Date.now() - minutesToShow * 6 * 60000).toISOString();
+    const start = new Date(Date.now() - minutesToShow * 60000).toISOString();
     const hist = await this._hass.callApi(
       'GET',
       `history/period/${start}?filter_entity_id=${ids.join(',')}&minimal_response`
@@ -111,7 +106,7 @@ class HaWindStatCard extends HTMLElement {
       const map = {};
       entries.forEach(e => {
         const t = new Date(e.last_changed || e.last_updated);
-        const key = t.toISOString().slice(0, 16); // up to minute
+        const key = t.toISOString().slice(0, 16);
         const val = parseFloat(e.state);
         if (isNaN(val)) return;
         if (!map[key]) map[key] = { sum: 0, count: 0 };
@@ -148,7 +143,6 @@ class HaWindStatCard extends HTMLElement {
     const gustAvg = avgPerMinute(gustHist);
     const dirAvg = avgAnglesPerMinute(dirHist);
 
-    // Combine values by minute without requiring matching timestamps
     const minuteMap = {};
     const addValues = (arr, prop) => {
       arr.forEach(({ minute, avg }) => {
@@ -160,57 +154,93 @@ class HaWindStatCard extends HTMLElement {
     addValues(gustAvg, 'gust');
     addValues(dirAvg, 'dir');
 
-    const minutes = Object.keys(minuteMap).sort((a, b) => new Date(a) - new Date(b));
-    if (!minutes.length) {
-      this.content.innerHTML = '';
-      return;
-    }
-    const startIndex = Math.max(minutes.length - minutesToShow, 0);
-    const visibleMinutes = minutes.slice(startIndex);
-
+    const now = new Date();
+    const data = [];
     let max = 0;
-    for (let i = startIndex; i < minutes.length; i++) {
-      const d = minuteMap[minutes[i]];
-      const s = d.speed || 0;
-      const g = d.gust || s;
-      max = Math.max(max, g);
+    for (let i = minutesToShow - 1; i >= 0; i--) {
+      const mTime = new Date(now.getTime() - i * 60000);
+      const key = mTime.toISOString().slice(0, 16);
+      const d = minuteMap[key] || {};
+      const speed = d.speed || 0;
+      const gust = d.gust !== undefined ? d.gust : speed;
+      const dir = d.dir !== undefined ? d.dir : undefined;
+      max = Math.max(max, gust);
+      data.push({ key, speed, gust, dir });
     }
+    this._max = max || 1;
+    this._data = data;
+  this._renderGraph();
+  }
 
-    const graph = document.createElement('div');
+  _renderGraph() {
+    if (!this._data) return;
+    const minutesToShow = this._config.minutes;
+    const graph = this._graph || document.createElement('div');
     graph.className = 'graph';
+    graph.style.gridTemplateColumns = `repeat(${minutesToShow}, 1fr)`;
 
-    // Add horizontal grid lines every 5kn up to the highest bar
-    const grid = document.createElement('div');
+    // create grid lines
+    const grid = this._grid || document.createElement('div');
     grid.className = 'grid';
+    while (grid.firstChild) grid.removeChild(grid.firstChild);
     const gridStep = 5;
-    const gridMax = Math.floor(max / gridStep) * gridStep;
+    const gridMax = Math.floor(this._max / gridStep) * gridStep;
     for (let v = gridStep; v <= gridMax; v += gridStep) {
       const line = document.createElement('div');
       line.className = 'grid-line';
-      line.style.bottom = `${(v / max) * 100}%`;
+      line.style.bottom = `${(v / this._max) * 100}%`;
       grid.appendChild(line);
     }
-    graph.appendChild(grid);
+    if (!this._grid) {
+      graph.appendChild(grid);
+      this._grid = grid;
+    }
 
-    for (let i = startIndex; i < minutes.length; i++) {
-      const m = minutes[i];
-      const data = minuteMap[m];
-      const speed = data.speed || 0;
-      const gust = data.gust || speed;
-      const dir = data.dir !== undefined ? data.dir : 0;
-      const spdHeight = (speed / max) * 100;
-      const gstHeight = (Math.max(gust - speed, 0) / max) * 100;
+    this._bars = this._bars || [];
+    this._prevDirs = this._prevDirs || {};
 
-      const minute = document.createElement('div');
-      minute.className = 'minute';
+    for (let i = 0; i < this._data.length; i++) {
+      const { key, speed, gust, dir } = this._data[i];
+      const spdHeight = (speed / this._max) * 100;
+      const gstHeight = (Math.max(gust - speed, 0) / this._max) * 100;
 
-      const arrow = document.createElement('ha-icon');
-      arrow.className = 'arrow';
-      arrow.setAttribute('icon', 'mdi:navigation');
-      const prev = this._prevDirs[m];
-      const startDir = prev !== undefined ? prev : dir;
-      const diff = ((dir - startDir + 540) % 360) - 180;
-      const endDir = startDir + diff;
+      let wrap = this._bars[i];
+      if (!wrap) {
+        wrap = document.createElement('div');
+        wrap.className = 'minute';
+
+        const arrow = document.createElement('ha-icon');
+        arrow.className = 'arrow';
+        arrow.setAttribute('icon', 'mdi:navigation');
+        wrap.appendChild(arrow);
+
+        const bars = document.createElement('div');
+        bars.className = 'bars';
+
+        const speedBar = document.createElement('div');
+        speedBar.className = 'bar speed';
+        bars.appendChild(speedBar);
+
+        const gustBar = document.createElement('div');
+        gustBar.className = 'bar gust';
+        bars.appendChild(gustBar);
+
+        wrap.appendChild(bars);
+        this._bars[i] = wrap;
+        if (graph.children.length <= i + 1) {
+          graph.appendChild(wrap);
+        } else {
+          graph.insertBefore(wrap, graph.children[i + 1]);
+        }
+      }
+
+      const arrow = wrap.querySelector('.arrow');
+      const speedBar = wrap.querySelector('.speed');
+      const gustBar = wrap.querySelector('.gust');
+
+      const prevDir = this._prevDirs[key];
+      const startDir = prevDir !== undefined ? prevDir : (dir !== undefined ? dir : 0);
+      const endDir = dir !== undefined ? startDir + (((dir - startDir + 540) % 360) - 180) : startDir;
       arrow.style.transform = `rotate(${startDir + 180}deg)`;
       requestAnimationFrame(() => {
         arrow.animate(
@@ -221,30 +251,32 @@ class HaWindStatCard extends HTMLElement {
           { duration: 500, fill: 'forwards' }
         );
       });
-      this._prevDirs[m] = ((endDir % 360) + 360) % 360;
-      minute.appendChild(arrow);
+      this._prevDirs[key] = ((endDir % 360) + 360) % 360;
 
-      const bars = document.createElement('div');
-      bars.className = 'bars';
+      const animateHeight = (el, value) => {
+        const from = el.style.height || '0%';
+        el.animate([
+          { height: from },
+          { height: `${value}%` }
+        ], { duration: 500, fill: 'forwards' });
+        el.style.height = `${value}%`;
+      };
 
-      const speedBar = document.createElement('div');
-      speedBar.className = 'bar speed';
-      speedBar.style.height = `${spdHeight}%`;
-      bars.appendChild(speedBar);
-
-      const gustBar = document.createElement('div');
-      gustBar.className = 'bar gust';
-      gustBar.style.height = `${spdHeight + gstHeight}%`;
-      bars.appendChild(gustBar);
-
-      minute.appendChild(bars);
-      graph.appendChild(minute);
+      animateHeight(speedBar, spdHeight);
+      animateHeight(gustBar, spdHeight + gstHeight);
     }
-    this.content.innerHTML = '';
-    this.content.appendChild(graph);
-    Object.keys(this._prevDirs).forEach(k => {
-      if (!visibleMinutes.includes(k)) delete this._prevDirs[k];
-    });
+
+    // remove extra bars if minutes decreased
+    while (this._bars.length > this._data.length) {
+      const old = this._bars.pop();
+      old.remove();
+    }
+
+    if (!this._graph) {
+      this.content.innerHTML = '';
+      this.content.appendChild(graph);
+      this._graph = graph;
+    }
   }
 
   getCardSize() {
