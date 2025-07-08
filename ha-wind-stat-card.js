@@ -78,10 +78,17 @@ class HaWindStatCard extends LitElement {
       for (let i = minutes - 1; i >= 0; i--) {
         const mTime = new Date(now.getTime() - i * 60000);
         const key = mTime.toISOString().slice(0, 16);
+      
         const wind = minuteMap[key]?.wind ?? 0;
-        const gust = minuteMap[key]?.gust ?? wind;
-        max = Math.max(max, gust);
-        data.push({ wind, gust });
+        const gustRaw = minuteMap[key]?.gust;
+        const gust = typeof gustRaw === 'number' ? gustRaw : wind;
+      
+        console.log(`minute: ${key}`, 'wind:', wind, 'raw gust:', gustRaw, 'used gust:', gust);
+      
+        const gustFinal = Math.min(60, Math.max(0, parseFloat(gust)));
+        const windFinal = Math.min(60, Math.max(0, parseFloat(wind)));
+      
+        data.push({ wind: windFinal, gust: gustFinal });
       }
       this._data = data;
       this._maxGust = max;
