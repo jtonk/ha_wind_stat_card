@@ -201,9 +201,6 @@ class HaWindStatCard extends LitElement {
               style="background:${colorGust};height:1px;margin-bottom:${gustHeight}px;width:100%;"
             ></div>`
           : null}
-        ${(this._data.length - 1 - index) % 5 === 0
-          ? html`<div class="minute-marker"></div>`
-          : null}
       </div>
     `;
   }
@@ -263,15 +260,7 @@ class HaWindStatCard extends LitElement {
       display: block;
       text-align: center;
       transform-origin: center center;
-      margin-bottom: 2px;
-    }
-    .minute-marker {
-      position: absolute;
-      bottom: -4px;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      background: var(--secondary-text-color);
+      margin-bottom: 0;
     }
     .h-line {
       position: absolute;
