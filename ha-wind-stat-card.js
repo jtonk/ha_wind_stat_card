@@ -40,6 +40,9 @@ class HaWindStatCard extends LitElement {
         'GET',
         `history/period/${start}?filter_entity_id=${ids}&minimal_response`
       );
+
+      console.log('RAW history data from HA:', JSON.parse(JSON.stringify(hist)));
+      
       const windHist = hist.find(h => h[0]?.entity_id === this._config.wind_entity) || [];
       const gustHist = hist.find(h => h[0]?.entity_id === this._config.gust_entity) || [];
 
