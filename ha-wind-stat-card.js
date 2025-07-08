@@ -17,9 +17,9 @@ class HaWindStatCard extends LitElement {
   }
 
   setConfig(config) {
-    if (!config.wind_entity || !config.gust_entity) {
+    if (!config.wind_entity || !config.gust_entity || !config.direction_entity) {
       this._noData = true;
-      this._error = 'wind_entity and gust_entity must be set';
+      this._error = 'wind_entity, gust_entity and direction_entity must be set';
       return;
     }
     this._config = {
@@ -54,7 +54,7 @@ class HaWindStatCard extends LitElement {
     now.setSeconds(0, 0);
     const end = now.toISOString();
     const start = new Date(now.getTime() - minutes * 60000).toISOString();
-    const ids = `${this._config.wind_entity},${this._config.gust_entity}`;
+    const ids = `${this._config.wind_entity},${this._config.gust_entity},${this._config.direction_entity}`;
 
     try {
       const hist = await this.hass.callApi(
@@ -64,11 +64,13 @@ class HaWindStatCard extends LitElement {
 
       const windHistGroup = hist.find(h => Array.isArray(h) && h[0]?.entity_id === this._config.wind_entity);
       const gustHistGroup = hist.find(h => Array.isArray(h) && h[0]?.entity_id === this._config.gust_entity);
+      const dirHistGroup = hist.find(h => Array.isArray(h) && h[0]?.entity_id === this._config.direction_entity);
 
       const windHist = Array.isArray(windHistGroup) ? windHistGroup : [];
       const gustHist = Array.isArray(gustHistGroup) ? gustHistGroup : [];
+      const dirHist = Array.isArray(dirHistGroup) ? dirHistGroup : [];
 
-      this._noData = !windHist.length && !gustHist.length;
+      this._noData = !windHist.length && !gustHist.length && !dirHist.length;
 
       const avgPerMinute = entries => {
         const map = {};
@@ -84,8 +86,30 @@ class HaWindStatCard extends LitElement {
         return Object.keys(map).sort().map(k => ({ minute: k, avg: map[k].sum / map[k].count }));
       };
 
+      const avgVectorPerMinute = entries => {
+        const map = {};
+        entries.forEach(e => {
+          const t = new Date(e.last_changed || e.last_updated);
+          const key = t.toISOString().slice(0, 16);
+          const val = parseFloat(e.state);
+          if (!isFinite(val)) return;
+          const rad = (val * Math.PI) / 180;
+          if (!map[key]) map[key] = { x: 0, y: 0, count: 0 };
+          map[key].x += Math.cos(rad);
+          map[key].y += Math.sin(rad);
+          map[key].count += 1;
+        });
+        return Object.keys(map).sort().map(k => {
+          const d = map[k];
+          const avgRad = Math.atan2(d.y / d.count, d.x / d.count);
+          const deg = (avgRad * 180) / Math.PI;
+          return { minute: k, avg: (deg + 360) % 360 };
+        });
+      };
+
       const windAvg = avgPerMinute(windHist);
       const gustAvg = avgPerMinute(gustHist);
+      const dirAvg = avgVectorPerMinute(dirHist);
 
       const minuteMap = {};
       windAvg.forEach(({ minute, avg }) => {
@@ -95,6 +119,10 @@ class HaWindStatCard extends LitElement {
       gustAvg.forEach(({ minute, avg }) => {
         if (!minuteMap[minute]) minuteMap[minute] = {};
         minuteMap[minute].gust = avg;
+      });
+      dirAvg.forEach(({ minute, avg }) => {
+        if (!minuteMap[minute]) minuteMap[minute] = {};
+        minuteMap[minute].direction = avg;
       });
 
       const data = [];
@@ -106,17 +134,18 @@ class HaWindStatCard extends LitElement {
         const wind = minuteMap[key]?.wind ?? 0;
         const gustRaw = minuteMap[key]?.gust;
         const gust = typeof gustRaw === 'number' ? gustRaw : wind;
+        const direction = minuteMap[key]?.direction ?? 0;
 
         const gustFinal = Math.min(60, Math.max(0, parseFloat(gust)));
         const windFinal = Math.min(60, Math.max(0, parseFloat(wind)));
 
         max = Math.max(max, gustFinal);
 
-        data.push({ wind: windFinal, gust: gustFinal });
+        data.push({ wind: windFinal, gust: gustFinal, direction });
       }
 
       if (this._initialLoad) {
-        this._data = data.map(() => ({ wind: 0, gust: 0 }));
+        this._data = data.map(() => ({ wind: 0, gust: 0, direction: 0 }));
         this._maxGust = max;
         this._lastUpdated = new Date();
         await this.updateComplete;
@@ -145,7 +174,7 @@ class HaWindStatCard extends LitElement {
     return wsColors[index];
   }
 
-  _renderBar({ wind, gust }) {
+  _renderBar({ wind, gust, direction }, index) {
     const scale = this._maxGust || 1;
     const height = this._config.graph_height;
 
@@ -157,6 +186,11 @@ class HaWindStatCard extends LitElement {
 
     return html`
       <div class="wind-bar-segment">
+        <ha-icon
+          class="dir-icon"
+          icon="mdi:navigation"
+          style="transform: rotate(${direction + 180}deg);"
+        ></ha-icon>
         <div
           class="date-wind-bar-segment"
           style="background:${colorWind};height:${windHeight}px;width:100%;"
@@ -166,6 +200,9 @@ class HaWindStatCard extends LitElement {
               class="date-gust-bar-segment"
               style="background:${colorGust};height:1px;margin-bottom:${gustHeight}px;width:100%;"
             ></div>`
+          : null}
+        ${(this._data.length - 1 - index) % 5 === 0
+          ? html`<div class="minute-marker"></div>`
           : null}
       </div>
     `;
@@ -182,10 +219,18 @@ class HaWindStatCard extends LitElement {
           class="graph"
           style="height:${this._config.graph_height}px"
         >
+          ${(() => {
+            const scale = this._maxGust || 1;
+            const lines = [];
+            for (let v = 5; v <= scale; v += 5) {
+              lines.push(html`<div class="h-line" style="bottom:${(v / scale) * 100}%"></div>`);
+            }
+            return lines;
+          })()}
           ${repeat(
             this._data,
             (_d, index) => index,
-            d => this._renderBar(d)
+            (d, index) => this._renderBar(d, index)
           )}
         </div>
         <div class="footer">Updated: ${this._lastUpdated?.toLocaleTimeString()}</div>
@@ -201,6 +246,7 @@ class HaWindStatCard extends LitElement {
       display: flex;
       align-items: end;
       gap: 1px;
+      position: relative;
     }
     .wind-bar-segment {
       position: relative;
@@ -209,6 +255,30 @@ class HaWindStatCard extends LitElement {
       flex-direction: column-reverse;
       align-items: stretch;
       transition: height 0.6s ease;
+    }
+    .dir-icon {
+      --mdc-icon-size: 100%;
+      width: 100%;
+      height: 1em;
+      display: block;
+      text-align: center;
+      transform-origin: center center;
+      margin-bottom: 2px;
+    }
+    .minute-marker {
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: var(--secondary-text-color);
+    }
+    .h-line {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 1px;
+      background: var(--divider-color);
     }
     .date-wind-bar-segment,
     .date-gust-bar-segment {
