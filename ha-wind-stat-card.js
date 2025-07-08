@@ -1,3 +1,4 @@
+//ha wind stat card script
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
 class HaWindStatCard extends LitElement {
