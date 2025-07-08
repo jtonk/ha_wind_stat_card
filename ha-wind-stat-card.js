@@ -1,4 +1,5 @@
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
+import { repeat } from 'https://unpkg.com/lit/directives/repeat.js?module';
 
 class HaWindStatCard extends LitElement {
   static properties = {
@@ -9,6 +10,11 @@ class HaWindStatCard extends LitElement {
     _lastUpdated: { state: true },
     _noData: { state: true }
   };
+
+  constructor() {
+    super();
+    this._initialLoad = true;
+  }
 
   setConfig(config) {
     if (!config.wind_entity || !config.gust_entity) {
@@ -109,6 +115,14 @@ class HaWindStatCard extends LitElement {
         data.push({ wind: windFinal, gust: gustFinal });
       }
 
+      if (this._initialLoad) {
+        this._data = data.map(() => ({ wind: 0, gust: 0 }));
+        this._maxGust = max;
+        this._lastUpdated = new Date();
+        await this.updateComplete;
+        this._initialLoad = false;
+      }
+
       this._data = data;
       this._maxGust = max;
       this._lastUpdated = new Date();
@@ -168,7 +182,11 @@ class HaWindStatCard extends LitElement {
           class="graph"
           style="height:${this._config.graph_height}px"
         >
-          ${this._data.map(d => this._renderBar(d))}
+          ${repeat(
+            this._data,
+            (_d, index) => index,
+            d => this._renderBar(d)
+          )}
         </div>
         <div class="footer">Updated: ${this._lastUpdated?.toLocaleTimeString()}</div>
       </ha-card>
