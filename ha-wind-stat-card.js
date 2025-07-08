@@ -153,7 +153,7 @@ class HaWindStatCard extends LitElement {
         this._initialLoad = false;
       }
 
-      this._data = data;
+      await this._updateDataRolling(data);
       this._maxGust = max;
       this._lastUpdated = new Date();
     } catch (err) {
@@ -173,6 +173,19 @@ class HaWindStatCard extends LitElement {
     ];
     const index = Math.min(wsColors.length - 1, Math.floor(speed / 2));
     return wsColors[index];
+  }
+
+  async _updateDataRolling(newData) {
+    if (!Array.isArray(newData)) return;
+    const current = Array.isArray(this._data)
+      ? [...this._data]
+      : newData.map(() => ({ wind: 0, gust: 0, direction: 0 }));
+    for (let i = newData.length - 1; i >= 0; i--) {
+      current[i] = newData[i];
+      this._data = [...current];
+      // Small delay for rolling effect
+      await new Promise(res => setTimeout(res, 50));
+    }
   }
 
   _renderBar({ wind, gust, direction }, index) {
