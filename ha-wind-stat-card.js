@@ -41,9 +41,11 @@ class HaWindStatCard extends LitElement {
         `history/period/${start}?filter_entity_id=${ids}&minimal_response`
       );
 
-      
-      const windHist = hist.find(h => h[0]?.entity_id === this._config.wind_entity) || [];
-      const gustHist = hist.find(h => h[0]?.entity_id === this._config.gust_entity) || [];
+      const windHistGroup = hist.find(h => Array.isArray(h) && h[0]?.entity_id === this._config.wind_entity);
+      const gustHistGroup = hist.find(h => Array.isArray(h) && h[0]?.entity_id === this._config.gust_entity);
+
+      const windHist = Array.isArray(windHistGroup) ? windHistGroup : [];
+      const gustHist = Array.isArray(gustHistGroup) ? gustHistGroup : [];
 
       this._noData = !windHist.length && !gustHist.length;
 
@@ -53,7 +55,7 @@ class HaWindStatCard extends LitElement {
           const t = new Date(e.last_changed || e.last_updated);
           const key = t.toISOString().slice(0, 16);
           const val = parseFloat(e.state);
-          if (isNaN(val)) return;
+          if (!isFinite(val) || val < 0 || val > 100) return;
           if (!map[key]) map[key] = { sum: 0, count: 0 };
           map[key].sum += val;
           map[key].count += 1;
@@ -80,16 +82,16 @@ class HaWindStatCard extends LitElement {
       for (let i = minutes - 1; i >= 0; i--) {
         const mTime = new Date(now.getTime() - i * 60000);
         const key = mTime.toISOString().slice(0, 16);
-      
+
         const wind = minuteMap[key]?.wind ?? 0;
         const gustRaw = minuteMap[key]?.gust;
         const gust = typeof gustRaw === 'number' ? gustRaw : wind;
-      
-        console.log(`minute: ${key}`, 'wind:', wind, 'raw gust:', gustRaw, 'used gust:', gust);
-      
+
         const gustFinal = Math.min(60, Math.max(0, parseFloat(gust)));
         const windFinal = Math.min(60, Math.max(0, parseFloat(wind)));
-      
+
+        max = Math.max(max, gustFinal);
+
         data.push({ wind: windFinal, gust: gustFinal });
       }
       this._data = data;
@@ -119,7 +121,6 @@ class HaWindStatCard extends LitElement {
     const gustHeight = Math.max(0, Math.round(gust - wind));
     const colorWind = this._getColor(wind);
     const colorGust = this._getColor(gust);
-    console.log('WIND:', wind, 'GUST:', gust, 'DIFF:', gust - wind);
     return html`
       <div class="wind-bar-segment">
         <div class="date-wind-bar-segment" style="background:${colorWind};height:${windHeight}px;width:100%;display:inline-block;"></div>
@@ -138,45 +139,3 @@ class HaWindStatCard extends LitElement {
       <ha-card>
         <div class="graph">
           ${this._data.map(d => this._renderBar(d))}
-        </div>
-        <div class="footer">Updated: ${this._lastUpdated?.toLocaleTimeString()}</div>
-      </ha-card>
-    `;
-  }
-
-  static styles = css`
-    :host {
-      display: block;
-    }
-    .graph {
-      display: flex;
-      align-items: end;
-      height: 100px;
-      gap: 1px;
-    }
-    .wind-bar-segment {
-      position: relative;
-      height: 100%;
-      width: 100%;
-      display: flex;
-      flex-direction: column-reverse;
-      align-items: stretch;
-    }
-    .date-wind-bar-segment,
-    .date-gust-bar-segment {
-      display: inline-block;
-    }
-    .footer {
-      text-align: center;
-      font-size: 0.8em;
-      padding: 8px 0;
-      color: var(--secondary-text-color);
-    }
-    ha-card.no-data {
-      padding: 16px;
-      text-align: center;
-    }
-  `;
-}
-
-customElements.define('ha-wind-stat-card', HaWindStatCard);
