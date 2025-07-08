@@ -10,9 +10,12 @@ The card loads data through the Home Assistant history API and refreshes itself 
 - Stacked bars showing wind speed with gusts on top
 - Y‑axis from 0–60 kn with grid lines every 5 kn (only up to current max gust)
 - Auto refreshes once per minute and shows the last updated time
-- Works with two sensors configured in YAML:
+- Direction arrows for each minute showing averaged wind direction
+- Markers every 5 minutes below the graph
+- Works with three sensors configured in YAML:
   - `wind_entity`
   - `gust_entity`
+  - `direction_entity`
 - Fallback message when no data is available
 
 ## Usage
@@ -32,6 +35,7 @@ resources:
 type: 'custom:ha-wind-stat-card'
 wind_entity: sensor.wind_speed
 gust_entity: sensor.wind_gust
+direction_entity: sensor.wind_direction
 # Optional number of minutes (defaults to 30)
 minutes: 45
 ```
