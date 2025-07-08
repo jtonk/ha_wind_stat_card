@@ -127,7 +127,8 @@ class HaWindStatCard extends LitElement {
 
       const data = [];
       let max = 0;
-      for (let i = minutes - 1; i >= 0; i--) {
+      // Skip the first minute as it often has no data yet
+      for (let i = minutes - 2; i >= 0; i--) {
         const mTime = new Date(now.getTime() - i * 60000);
         const key = mTime.toISOString().slice(0, 16);
 
@@ -255,12 +256,15 @@ class HaWindStatCard extends LitElement {
     }
     .dir-icon {
       --mdc-icon-size: 100%;
+      position: absolute;
+      bottom: 0;
+      left: 0;
       width: 100%;
       height: 1em;
       display: block;
       text-align: center;
+      pointer-events: none;
       transform-origin: center center;
-      margin-bottom: 0;
     }
     .h-line {
       position: absolute;
