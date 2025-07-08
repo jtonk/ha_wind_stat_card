@@ -139,3 +139,45 @@ class HaWindStatCard extends LitElement {
       <ha-card>
         <div class="graph">
           ${this._data.map(d => this._renderBar(d))}
+        </div>
+        <div class="footer">Updated: ${this._lastUpdated?.toLocaleTimeString()}</div>
+      </ha-card>
+    `;
+  }
+
+  static styles = css`
+    :host {
+      display: block;
+    }
+    .graph {
+      display: flex;
+      align-items: end;
+      height: 100px;
+      gap: 1px;
+    }
+    .wind-bar-segment {
+      position: relative;
+      height: 100%;
+      width: 100%;
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: stretch;
+    }
+    .date-wind-bar-segment,
+    .date-gust-bar-segment {
+      display: inline-block;
+    }
+    .footer {
+      text-align: center;
+      font-size: 0.8em;
+      padding: 8px 0;
+      color: var(--secondary-text-color);
+    }
+    ha-card.no-data {
+      padding: 16px;
+      text-align: center;
+    }
+  `;
+}
+
+customElements.define('ha-wind-stat-card', HaWindStatCard);
