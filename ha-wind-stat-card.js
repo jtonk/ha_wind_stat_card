@@ -50,8 +50,11 @@ class HaWindStatCard extends LitElement {
     if (!this.hass || !this._config) return;
 
     const minutes = this._config.minutes;
+
+    // Use the previous full minute as "now"
     const now = new Date();
     now.setSeconds(0, 0);
+    now.setMinutes(now.getMinutes() - 1);
     const end = now.toISOString();
     const start = new Date(now.getTime() - minutes * 60000).toISOString();
     const ids = `${this._config.wind_entity},${this._config.gust_entity},${this._config.direction_entity}`;
@@ -127,8 +130,8 @@ class HaWindStatCard extends LitElement {
 
       const data = [];
       let max = 0;
-      // Skip the first minute as it often has no data yet
-      for (let i = minutes - 2; i >= 0; i--) {
+
+      for (let i = minutes - 1; i >= 0; i--) {
         const mTime = new Date(now.getTime() - i * 60000);
         const key = mTime.toISOString().slice(0, 16);
 
@@ -183,7 +186,6 @@ class HaWindStatCard extends LitElement {
     for (let i = newData.length - 1; i >= 0; i--) {
       current[i] = newData[i];
       this._data = [...current];
-      // Small delay for rolling effect
       await new Promise(res => setTimeout(res, 50));
     }
   }
@@ -226,10 +228,7 @@ class HaWindStatCard extends LitElement {
 
     return html`
       <ha-card>
-        <div
-          class="graph"
-          style="height:${this._config.graph_height}px"
-        >
+        <div class="graph" style="height:${this._config.graph_height}px">
           ${(() => {
             const scale = this._maxGust || 1;
             const lines = [];
