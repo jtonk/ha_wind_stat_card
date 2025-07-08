@@ -110,7 +110,7 @@ class HaWindStatCard extends LitElement {
     const gustHeight = Math.max(0, Math.round(gust - wind));
     const colorWind = this._getColor(wind);
     const colorGust = this._getColor(gust);
-
+    console.log('WIND:', wind, 'GUST:', gust, 'DIFF:', gust - wind);
     return html`
       <div class="wind-bar-segment">
         <div class="date-wind-bar-segment" style="background:${colorWind};height:${windHeight}px;width:100%;display:inline-block;"></div>
