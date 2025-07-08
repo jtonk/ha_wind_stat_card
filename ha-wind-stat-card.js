@@ -1,4 +1,3 @@
-//ha wind stat card script
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
 class HaWindStatCard extends LitElement {
@@ -17,29 +16,44 @@ class HaWindStatCard extends LitElement {
       this._error = 'wind_entity and gust_entity must be set';
       return;
     }
-    this._config = { minutes: 30, ...config };
+    this._config = {
+      minutes: 30,
+      graph_height: 100,
+      ...config
+    };
   }
 
   connectedCallback() {
     super.connectedCallback();
-    this._fetchData();
-    this._interval = setInterval(() => this._fetchData(), 60000);
+    this._scheduleNextFetch();
   }
 
   disconnectedCallback() {
-    clearInterval(this._interval);
+    clearTimeout(this._timeout);
     super.disconnectedCallback();
+  }
+
+  _scheduleNextFetch() {
+    this._fetchData();
+    const now = new Date();
+    const msUntilNextMinute = 60000 - (now.getSeconds() * 1000 + now.getMilliseconds());
+    this._timeout = setTimeout(() => this._scheduleNextFetch(), msUntilNextMinute);
   }
 
   async _fetchData() {
     if (!this.hass || !this._config) return;
+
     const minutes = this._config.minutes;
-    const start = new Date(Date.now() - minutes * 60000).toISOString();
+    const now = new Date();
+    now.setSeconds(0, 0);
+    const end = now.toISOString();
+    const start = new Date(now.getTime() - minutes * 60000).toISOString();
     const ids = `${this._config.wind_entity},${this._config.gust_entity}`;
+
     try {
       const hist = await this.hass.callApi(
         'GET',
-        `history/period/${start}?filter_entity_id=${ids}&minimal_response`
+        `history/period/${start}?end_time=${end}&filter_entity_id=${ids}&minimal_response`
       );
 
       const windHistGroup = hist.find(h => Array.isArray(h) && h[0]?.entity_id === this._config.wind_entity);
@@ -77,7 +91,6 @@ class HaWindStatCard extends LitElement {
         minuteMap[minute].gust = avg;
       });
 
-      const now = new Date();
       const data = [];
       let max = 0;
       for (let i = minutes - 1; i >= 0; i--) {
@@ -95,6 +108,7 @@ class HaWindStatCard extends LitElement {
 
         data.push({ wind: windFinal, gust: gustFinal });
       }
+
       this._data = data;
       this._maxGust = max;
       this._lastUpdated = new Date();
@@ -118,27 +132,42 @@ class HaWindStatCard extends LitElement {
   }
 
   _renderBar({ wind, gust }) {
-    const windHeight = Math.round(wind);
-    const gustHeight = Math.max(0, Math.round(gust - wind));
+    const scale = this._maxGust || 1;
+    const height = this._config.graph_height;
+
+    const windHeight = Math.round((wind / scale) * height);
+    const gustHeight = Math.max(0, Math.round(((gust - wind) / scale) * height));
+
     const colorWind = this._getColor(wind);
     const colorGust = this._getColor(gust);
+
     return html`
       <div class="wind-bar-segment">
-        <div class="date-wind-bar-segment" style="background:${colorWind};height:${windHeight}px;width:100%;display:inline-block;"></div>
+        <div
+          class="date-wind-bar-segment"
+          style="background:${colorWind};height:${windHeight}px;width:100%;"
+        ></div>
         ${gustHeight > 0
-          ? html`<div class="date-gust-bar-segment" style="background:${colorGust};height:1px;margin-bottom:${gustHeight}px;width:100%;display:inline-block;"></div>`
+          ? html`<div
+              class="date-gust-bar-segment"
+              style="background:${colorGust};height:1px;margin-bottom:${gustHeight}px;width:100%;"
+            ></div>`
           : null}
       </div>
     `;
   }
 
   render() {
-    if (this._noData) {
+    if (this._noData || !Array.isArray(this._data)) {
       return html`<ha-card class="no-data">${this._error || 'No data available'}</ha-card>`;
     }
+
     return html`
       <ha-card>
-        <div class="graph">
+        <div
+          class="graph"
+          style="height:${this._config.graph_height}px"
+        >
           ${this._data.map(d => this._renderBar(d))}
         </div>
         <div class="footer">Updated: ${this._lastUpdated?.toLocaleTimeString()}</div>
@@ -153,20 +182,20 @@ class HaWindStatCard extends LitElement {
     .graph {
       display: flex;
       align-items: end;
-      height: 100px;
       gap: 1px;
     }
     .wind-bar-segment {
       position: relative;
-      height: 100%;
       width: 100%;
       display: flex;
       flex-direction: column-reverse;
       align-items: stretch;
+      transition: height 0.6s ease;
     }
     .date-wind-bar-segment,
     .date-gust-bar-segment {
       display: inline-block;
+      transition: height 0.6s ease, margin-bottom 0.6s ease;
     }
     .footer {
       text-align: center;
