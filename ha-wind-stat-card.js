@@ -307,7 +307,6 @@ class HaWindStatCard extends LitElement {
       flex-direction: column-reverse;
       align-items: stretch;
       transition: height 0.6s ease;
-      --icon-size: 0px;
     }
     .dir-container {
       flex-shrink: 0;
