@@ -345,10 +345,8 @@ class HaWindStatCard extends LitElement {
     }
     .footer {
       text-align: right;
-      font-size: 6px;
-      line-height: 8px;
-      height: 8px;
-      padding: 0 4px;
+      font-size: 8px;
+      padding: 4 12px;
       color: var(--secondary-text-color);
     }
     ha-card.no-data {
