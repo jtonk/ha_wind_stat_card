@@ -8,12 +8,14 @@ class HaWindStatCard extends LitElement {
     _data: { state: true },
     _maxGust: { state: true },
     _lastUpdated: { state: true },
-    _noData: { state: true }
+    _noData: { state: true },
+    _iconSize: { state: true }
   };
 
   constructor() {
     super();
     this._initialLoad = true;
+    this._iconSize = 0;
   }
 
   setConfig(config) {
@@ -36,9 +38,33 @@ class HaWindStatCard extends LitElement {
     this._scheduleNextFetch();
   }
 
+  firstUpdated() {
+    this._calcIconSize();
+    this._resizeObserver = new ResizeObserver(() => this._calcIconSize());
+    const g = this.shadowRoot.querySelector('.graph');
+    if (g) this._resizeObserver.observe(g);
+  }
+
+  updated(changedProps) {
+    if (changedProps.has('_data') || changedProps.has('_config')) {
+      this._calcIconSize();
+    }
+  }
+
   disconnectedCallback() {
     clearTimeout(this._timeout);
+    if (this._resizeObserver) this._resizeObserver.disconnect();
     super.disconnectedCallback();
+  }
+
+  _calcIconSize() {
+    const graph = this.shadowRoot?.querySelector('.graph');
+    if (!graph || !this._config) return;
+    const minutes = this._config.minutes;
+    const gap = 1;
+    const width = graph.clientWidth;
+    const size = Math.max(0, Math.round((width - gap * (minutes - 1)) / minutes));
+    this._iconSize = size;
   }
 
   _scheduleNextFetch() {
@@ -199,23 +225,28 @@ class HaWindStatCard extends LitElement {
     const height = this._config.graph_height;
     const multiplier = this._config.multiplier ?? 1;
 
+    const icon = this._iconSize;
+    const avail = Math.max(0, height - icon);
+
     const windHeight = auto
-      ? Math.round((wind / scale) * height)
+      ? Math.round((wind / scale) * avail)
       : Math.round(wind * multiplier);
     const gustHeight = auto
-      ? Math.max(0, Math.round(((gust - wind) / scale) * height))
+      ? Math.max(0, Math.round(((gust - wind) / scale) * avail))
       : Math.max(0, Math.round((gust - wind) * multiplier));
 
     const colorWind = this._getColor(wind);
     const colorGust = this._getColor(gust);
 
     return html`
-      <div class="wind-bar-segment">
-        <ha-icon
-          class="dir-icon"
-          icon="mdi:navigation"
-          style="transform: rotate(${direction + 180}deg);"
-        ></ha-icon>
+      <div class="wind-bar-segment" style="--icon-size:${this._iconSize}px">
+        <div class="dir-container">
+          <ha-icon
+            class="dir-icon"
+            icon="mdi:navigation"
+            style="transform: rotate(${direction + 180}deg);"
+          ></ha-icon>
+        </div>
         <div
           class="date-wind-bar-segment"
           style="background:${colorWind};height:${windHeight}px;width:100%;"
@@ -276,14 +307,20 @@ class HaWindStatCard extends LitElement {
       flex-direction: column-reverse;
       align-items: stretch;
       transition: height 0.6s ease;
+      --icon-size: 0px;
+    }
+    .dir-container {
+      flex-shrink: 0;
+      width: 100%;
+      height: var(--icon-size);
+      box-sizing: border-box;
+      padding: 1px;
+      position: relative;
     }
     .dir-icon {
       --mdc-icon-size: 100%;
-      position: absolute;
-      bottom: -1em;
-      left: 0;
       width: 100%;
-      height: 1em;
+      height: 100%;
       display: block;
       text-align: center;
       pointer-events: none;
@@ -304,9 +341,11 @@ class HaWindStatCard extends LitElement {
         background-color 0.6s ease;
     }
     .footer {
-      text-align: center;
-      font-size: 0.8em;
-      padding: 8px 0;
+      text-align: right;
+      font-size: 6px;
+      line-height: 8px;
+      height: 8px;
+      padding: 0 4px;
       color: var(--secondary-text-color);
     }
     ha-card.no-data {
@@ -315,5 +354,4 @@ class HaWindStatCard extends LitElement {
     }
   `;
 }
-
 customElements.define('ha-wind-stat-card', HaWindStatCard);
