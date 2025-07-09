@@ -17,6 +17,7 @@ The card loads data through the Home Assistant history API and refreshes itself 
   - `direction_entity`
 - Fallback message when no data is available
 - Optional automatic scaling of bar heights
+- Configurable multiplier for bar height when autoscale is disabled
 
 ## Usage
 
@@ -40,6 +41,8 @@ direction_entity: sensor.wind_direction
 minutes: 45
 # Disable automatic scaling of bars (default: true)
 autoscale: false
+# Multiply raw values by 2 pixels when autoscale is disabled
+multiplier: 2
 ```
 
 The card will automatically load history and update every minute.
