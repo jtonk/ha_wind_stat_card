@@ -25,6 +25,7 @@ class HaWindStatCard extends LitElement {
     this._config = {
       minutes: 30,
       graph_height: 100,
+      autoscale: true,
       ...config
     };
   }
@@ -191,11 +192,17 @@ class HaWindStatCard extends LitElement {
   }
 
   _renderBar({ wind, gust, direction }, index) {
+    const auto = this._config.autoscale !== false;
+
     const scale = this._maxGust || 1;
     const height = this._config.graph_height;
 
-    const windHeight = Math.round((wind / scale) * height);
-    const gustHeight = Math.max(0, Math.round(((gust - wind) / scale) * height));
+    const windHeight = auto
+      ? Math.round((wind / scale) * height)
+      : Math.round(wind);
+    const gustHeight = auto
+      ? Math.max(0, Math.round(((gust - wind) / scale) * height))
+      : Math.max(0, Math.round(gust - wind));
 
     const colorWind = this._getColor(wind);
     const colorGust = this._getColor(gust);
@@ -232,8 +239,9 @@ class HaWindStatCard extends LitElement {
           ${(() => {
             const scale = this._maxGust || 1;
             const lines = [];
+            const auto = this._config.autoscale !== false;
             for (let v = 5; v <= scale; v += 5) {
-              lines.push(html`<div class="h-line" style="bottom:${(v / scale) * 100}%"></div>`);
+              lines.push(html`<div class="h-line" style="bottom:${auto ? (v / scale) * 100 + '%' : v + 'px'}"></div>`);
             }
             return lines;
           })()}
