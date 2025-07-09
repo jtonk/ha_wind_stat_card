@@ -26,6 +26,7 @@ class HaWindStatCard extends LitElement {
       minutes: 30,
       graph_height: 100,
       autoscale: true,
+      multiplier: 1,
       ...config
     };
   }
@@ -196,13 +197,14 @@ class HaWindStatCard extends LitElement {
 
     const scale = this._maxGust || 1;
     const height = this._config.graph_height;
+    const multiplier = this._config.multiplier ?? 1;
 
     const windHeight = auto
       ? Math.round((wind / scale) * height)
-      : Math.round(wind);
+      : Math.round(wind * multiplier);
     const gustHeight = auto
       ? Math.max(0, Math.round(((gust - wind) / scale) * height))
-      : Math.max(0, Math.round(gust - wind));
+      : Math.max(0, Math.round((gust - wind) * multiplier));
 
     const colorWind = this._getColor(wind);
     const colorGust = this._getColor(gust);
@@ -240,8 +242,9 @@ class HaWindStatCard extends LitElement {
             const scale = this._maxGust || 1;
             const lines = [];
             const auto = this._config.autoscale !== false;
+            const multiplier = this._config.multiplier ?? 1;
             for (let v = 5; v <= scale; v += 5) {
-              lines.push(html`<div class="h-line" style="bottom:${auto ? (v / scale) * 100 + '%' : v + 'px'}"></div>`);
+              lines.push(html`<div class="h-line" style="bottom:${auto ? (v / scale) * 100 + '%' : v * multiplier + 'px'}"></div>`);
             }
             return lines;
           })()}
@@ -277,7 +280,7 @@ class HaWindStatCard extends LitElement {
     .dir-icon {
       --mdc-icon-size: 100%;
       position: absolute;
-      bottom: 0;
+      bottom: -1em;
       left: 0;
       width: 100%;
       height: 1em;
