@@ -56,7 +56,7 @@ class HaWindStatCard extends LitElement {
     now.setSeconds(0, 0);
     now.setMinutes(now.getMinutes() - 1);
     const end = now.toISOString();
-    const start = new Date(now.getTime() - minutes * 60000).toISOString();
+    const start = new Date(now.getTime() - (minutes + 1) * 60000).toISOString();
     const ids = `${this._config.wind_entity},${this._config.gust_entity},${this._config.direction_entity}`;
 
     try {
