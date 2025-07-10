@@ -54,9 +54,9 @@ class HaWindStatCard extends LitElement {
     const minutes = this._config.minutes;
     const now = new Date();
     now.setSeconds(0, 0);
-    now.setMinutes(now.getMinutes() - 1);
+    now.setMinutes(now.getMinutes());
     const end = now.toISOString();
-    const start = new Date(now.getTime() - (minutes + 1) * 60000).toISOString();
+    const start = new Date(now.getTime() - minutes * 60000).toISOString();
     const ids = `${this._config.wind_entity},${this._config.gust_entity},${this._config.direction_entity}`;
 
     try {
@@ -118,7 +118,7 @@ class HaWindStatCard extends LitElement {
       const data = [];
       let max = 0;
 
-      for (let i = minutes - 1; i >= 0; i--) {
+      for (let i = minutes; i >= 0; i--) {
         const mTime = new Date(now.getTime() - i * 60000);
         const key = mTime.toISOString().slice(0, 16);
         const wind = minuteMap[key]?.wind ?? 0;
