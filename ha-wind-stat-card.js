@@ -192,13 +192,13 @@ class HaWindStatCard extends LitElement {
 
     return html`
       <div class="wind-bar-segment">
-        <div class="bar-container">
-          <div class="date-wind-bar-segment" style="background:${colorWind};height:${windHeight}px;width:100%;"></div>
-          ${gustHeight > 0
-            ? html`<div class="date-gust-bar-segment" style="background:${colorGust};height:1px;margin-bottom:${gustHeight}px;width:100%;"></div>`
-            : null}
-        </div>
-        <div class="dir-container">
+        <div class="bar-wrapper">
+          <div class="bar-container">
+            <div class="date-wind-bar-segment" style="background:${colorWind};height:${windHeight}px;width:100%;"></div>
+            ${gustHeight > 0
+              ? html`<div class="date-gust-bar-segment" style="background:${colorGust};height:1px;margin-bottom:${gustHeight}px;width:100%;"></div>`
+              : null}
+          </div>
           <ha-icon class="dir-icon" icon="mdi:navigation" style="--mdc-icon-size: 80%; transform: rotate(${direction + 180}deg);"></ha-icon>
         </div>
       </div>`;
@@ -238,33 +238,33 @@ class HaWindStatCard extends LitElement {
       position: relative;
     }
     .wind-bar-segment {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-end;
-      height: 100%;
       flex: 1 1 0%;
-      min-width: 0;
       position: relative;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      height: 100%;
+    }
+    .bar-wrapper {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
     }
     .bar-container {
-      position: relative;
       width: 100%;
       display: flex;
       flex-direction: column-reverse;
       align-items: stretch;
       transition: height 0.6s ease;
     }
-    .dir-container {
-      width: 100%;
-      aspect-ratio: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
     .dir-icon {
-      display: block;
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
       pointer-events: none;
       transform-origin: center center;
     }
