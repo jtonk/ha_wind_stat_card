@@ -199,7 +199,7 @@ class HaWindStatCard extends LitElement {
             : null}
         </div>
         <div class="dir-container">
-          <ha-icon class="dir-icon" icon="mdi:navigation" style="transform: rotate(${direction + 180}deg);"></ha-icon>
+          <ha-icon class="dir-icon" icon="mdi:navigation" style="--mdc-icon-size: 80%; transform: rotate(${direction + 180}deg);"></ha-icon>
         </div>
       </div>`;
   }
@@ -264,8 +264,6 @@ class HaWindStatCard extends LitElement {
       flex-shrink: 0;
     }
     .dir-icon {
-      width: 100%;
-      height: 100%;
       display: block;
       pointer-events: none;
       transform-origin: center center;
