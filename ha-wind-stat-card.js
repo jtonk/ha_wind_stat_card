@@ -302,7 +302,14 @@ class HaWindStatCard extends LitElement {
     }
     .wind-bar-segment {
     }
-
+    .bar-container{
+      position: relative;
+      width: 100%;
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: stretch;
+      transition: height 0.6s ease;
+    }
     .dir-container {
       flex-shrink: 0;
       width: 100%;
