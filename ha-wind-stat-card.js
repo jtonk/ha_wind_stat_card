@@ -211,16 +211,18 @@ class HaWindStatCard extends LitElement {
     return html`
       <ha-card>
         <div class="graph" style="height:${this._config.graph_height}px">
-          ${(() => {
-            const scale = this._maxGust || 1;
-            const lines = [];
-            const auto = this._config.autoscale !== false;
-            const multiplier = this._config.multiplier ?? 1;
-            for (let v = 5; v <= scale; v += 5) {
-              lines.push(html`<div class="h-line" style="bottom:${auto ? (v / scale) * 100 + '%' : v * multiplier + 'px'}"></div>`);
-            }
-            return lines;
-          })()}
+          <div class="overlay-lines">
+            ${(() => {
+              const scale = this._maxGust || 1;
+              const lines = [];
+              const auto = this._config.autoscale !== false;
+              const multiplier = this._config.multiplier ?? 1;
+              for (let v = 5; v <= scale; v += 5) {
+                lines.push(html`<div class="h-line" style="bottom:${auto ? (v / scale) * 100 + '%' : v * multiplier + 'px'}"></div>`);
+              }
+              return lines;
+            })()}
+          </div>
           ${repeat(this._data, (_d, index) => index, (d, index) => this._renderBar(d, index))}
         </div>
         <div class="footer">Updated: ${this._lastUpdated?.toLocaleTimeString()}</div>
@@ -237,6 +239,15 @@ class HaWindStatCard extends LitElement {
       gap: 1px;
       position: relative;
     }
+    .overlay-lines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
     .wind-bar-segment {
       flex: 1 1 0%;
       position: relative;
@@ -244,6 +255,7 @@ class HaWindStatCard extends LitElement {
       align-items: flex-end;
       justify-content: center;
       height: 100%;
+      z-index: 0;
     }
     .bar-wrapper {
       position: relative;
@@ -263,8 +275,6 @@ class HaWindStatCard extends LitElement {
     .dir-icon {
       position: absolute;
       bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
       pointer-events: none;
       transform-origin: center center;
     }
