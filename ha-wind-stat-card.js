@@ -239,11 +239,7 @@ class HaWindStatCard extends LitElement {
     const colorGust = this._getColor(gust);
 
     return html`
-      <div class="wind-bar-segment" style="--icon-size:${icon}px">
-        <div class="dir-container">
-          <ha-icon class="dir-icon" icon="mdi:navigation" style="transform: rotate(${direction + 180}deg);">
-          </ha-icon>
-        </div>
+      <div class="wind-bar-segment">
         <div class="bar-container">
           <div
             class="date-wind-bar-segment"
@@ -256,6 +252,10 @@ class HaWindStatCard extends LitElement {
               ></div>`
             : null}
           </div>
+        </div>
+        <div class="dir-container">
+          <ha-icon class="dir-icon" icon="mdi:navigation" style="transform: rotate(${direction + 180}deg);">
+          </ha-icon>
         </div>
       </div>    
     `;
@@ -301,6 +301,8 @@ class HaWindStatCard extends LitElement {
       position: relative;
     }
     .wind-bar-segment {
+    }
+    .bar-container{
       position: relative;
       width: 100%;
       display: flex;
