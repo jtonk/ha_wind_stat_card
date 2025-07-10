@@ -8,14 +8,12 @@ class HaWindStatCard extends LitElement {
     _data: { state: true },
     _maxGust: { state: true },
     _lastUpdated: { state: true },
-    _noData: { state: true },
-    _iconSize: { state: true }
+    _noData: { state: true }
   };
 
   constructor() {
     super();
     this._initialLoad = true;
-    this._iconSize = 0;
   }
 
   setConfig(config) {
@@ -38,33 +36,9 @@ class HaWindStatCard extends LitElement {
     this._scheduleNextFetch();
   }
 
-  firstUpdated() {
-    this._calcIconSize();
-    this._resizeObserver = new ResizeObserver(() => this._calcIconSize());
-    const g = this.shadowRoot.querySelector('.graph');
-    if (g) this._resizeObserver.observe(g);
-  }
-
-  updated(changedProps) {
-    if (changedProps.has('_data') || changedProps.has('_config')) {
-      this._calcIconSize();
-    }
-  }
-
   disconnectedCallback() {
     clearTimeout(this._timeout);
-    if (this._resizeObserver) this._resizeObserver.disconnect();
     super.disconnectedCallback();
-  }
-
-  _calcIconSize() {
-    const graph = this.shadowRoot?.querySelector('.graph');
-    if (!graph || !this._config) return;
-    const minutes = this._config.minutes;
-    const gap = 1;
-    const width = graph.clientWidth;
-    const size = Math.min(24, Math.max(0, Math.round((width - gap * (minutes - 1)) / minutes)));
-    this._iconSize = size;
   }
 
   _scheduleNextFetch() {
@@ -198,13 +172,13 @@ class HaWindStatCard extends LitElement {
     }
   }
 
-  _renderBar({ wind, gust, direction }, index) {
+  _renderBar({ wind, gust, direction }) {
     const auto = this._config.autoscale !== false;
     const scale = this._maxGust || 1;
     const height = this._config.graph_height;
     const multiplier = this._config.multiplier ?? 1;
-    const iconSize = this._iconSize;
-    const avail = Math.max(0, height - iconSize);
+
+    const avail = Math.max(0, height - height / (this._config.minutes + 1));
 
     const windHeight = auto
       ? Math.round((wind / scale) * avail)
@@ -219,33 +193,21 @@ class HaWindStatCard extends LitElement {
     return html`
       <div class="wind-bar-segment">
         <div class="bar-container">
-          <div
-            class="date-wind-bar-segment"
-            style="background:${colorWind};height:${windHeight}px;width:100%;">
-          </div>
+          <div class="date-wind-bar-segment" style="background:${colorWind};height:${windHeight}px;width:100%;"></div>
           ${gustHeight > 0
-            ? html`<div
-                class="date-gust-bar-segment"
-                style="background:${colorGust};height:1px;margin-bottom:${gustHeight}px;width:100%;">
-              </div>`
+            ? html`<div class="date-gust-bar-segment" style="background:${colorGust};height:1px;margin-bottom:${gustHeight}px;width:100%;"></div>`
             : null}
         </div>
-        <div class="dir-container" style="height:${iconSize}px;width:${iconSize}px;">
-          <ha-icon
-            class="dir-icon"
-            icon="mdi:navigation"
-            style="width:${iconSize}px;height:${iconSize}px;transform: rotate(${direction + 180}deg);">
-          </ha-icon>
+        <div class="dir-container">
+          <ha-icon class="dir-icon" icon="mdi:navigation" style="transform: rotate(${direction + 180}deg);"></ha-icon>
         </div>
-      </div>
-    `;
+      </div>`;
   }
 
   render() {
     if (this._noData || !Array.isArray(this._data)) {
       return html`<ha-card class="no-data">${this._error || 'No data available'}</ha-card>`;
     }
-
     return html`
       <ha-card>
         <div class="graph" style="height:${this._config.graph_height}px">
@@ -262,8 +224,7 @@ class HaWindStatCard extends LitElement {
           ${repeat(this._data, (_d, index) => index, (d, index) => this._renderBar(d, index))}
         </div>
         <div class="footer">Updated: ${this._lastUpdated?.toLocaleTimeString()}</div>
-      </ha-card>
-    `;
+      </ha-card>`;
   }
 
   static styles = css`
@@ -282,6 +243,8 @@ class HaWindStatCard extends LitElement {
       align-items: center;
       justify-content: flex-end;
       height: 100%;
+      flex: 1 1 0%;
+      min-width: 0;
       position: relative;
     }
     .bar-container {
@@ -293,12 +256,16 @@ class HaWindStatCard extends LitElement {
       transition: height 0.6s ease;
     }
     .dir-container {
+      width: 100%;
+      aspect-ratio: 1;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
     }
     .dir-icon {
+      width: 100%;
+      height: 100%;
       display: block;
       pointer-events: none;
       transform-origin: center center;
@@ -328,4 +295,5 @@ class HaWindStatCard extends LitElement {
     }
   `;
 }
+
 customElements.define('ha-wind-stat-card', HaWindStatCard);
