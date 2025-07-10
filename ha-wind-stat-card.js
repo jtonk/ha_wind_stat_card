@@ -336,6 +336,7 @@ class HaWindStatCard extends LitElement {
       width: 100%;
       height: 1px;
       background: var(--divider-color);
+      z-index: 2;
     }
     .date-wind-bar-segment,
     .date-gust-bar-segment {
