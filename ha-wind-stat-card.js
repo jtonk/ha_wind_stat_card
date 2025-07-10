@@ -301,7 +301,14 @@ class HaWindStatCard extends LitElement {
       position: relative;
     }
     .wind-bar-segment {
+      display: flex;
+      flex-direction: column;
+      align-items: center; /* Optional, if you want to center horizontally */
+      justify-content: flex-end; /* Put bars at the bottom */
+      height: 100%;
+      position: relative;
     }
+
     .bar-container{
       position: relative;
       width: 100%;
