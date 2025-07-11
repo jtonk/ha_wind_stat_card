@@ -183,7 +183,7 @@ class HaWindStatCard extends LitElement {
     const height = this._config.graph_height;
     const multiplier = this._config.multiplier ?? 1;
 
-    const avail = Math.max(0, height - height / (this._config.minutes + 1));
+    const avail = Math.max(0, height - height / (this._config.minutes));
 
     const windHeight = auto
       ? Math.round((wind / scale) * avail)
