@@ -121,17 +121,30 @@ class HaWindStatCard extends LitElement {
       const data = [];
       let max = 0;
 
-      for (let i = minutes; i > 0; i--) {
+      for (let i = minutes - 1; i >= 0; i--) {
         const mTime = new Date(now.getTime() - i * 60000);
         const key = mTime.toISOString().slice(0, 16);
-        const wind = minuteMap[key]?.wind ?? 0;
-        const gust = typeof minuteMap[key]?.gust === 'number' ? minuteMap[key].gust : wind;
-        const direction = minuteMap[key]?.direction ?? 0;
-        const gustFinal = Math.min(60, Math.max(0, parseFloat(gust)));
-        const windFinal = Math.min(60, Math.max(0, parseFloat(wind)));
+      
+        const windRaw = minuteMap[key]?.wind;
+        const gustRaw = minuteMap[key]?.gust ?? windRaw;
+        const dirRaw = minuteMap[key]?.direction;
+      
+        if (
+          !Number.isFinite(windRaw) ||
+          !Number.isFinite(gustRaw) ||
+          !Number.isFinite(dirRaw)
+        ) {
+          continue; // Skip this entry if any are missing or invalid
+        }
+      
+        const gustFinal = Math.min(60, Math.max(0, gustRaw));
+        const windFinal = Math.min(60, Math.max(0, windRaw));
+        const direction = dirRaw;
+      
         max = Math.max(max, gustFinal);
         data.push({ wind: windFinal, gust: gustFinal, direction });
       }
+
 
       if (this._initialLoad) {
         this._data = data.map(() => ({ wind: 0, gust: 0, direction: 0 }));
@@ -211,7 +224,7 @@ class HaWindStatCard extends LitElement {
     if (this._noData || !Array.isArray(this._data)) {
       return html`<ha-card class="no-data">${this._error || 'No data available'}</ha-card>`;
     }
-    console.log(this._data);
+    
     return html`
       <ha-card>
         <div class="graph" style="height:${this._config.graph_height}px">
