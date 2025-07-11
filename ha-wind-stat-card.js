@@ -121,7 +121,7 @@ class HaWindStatCard extends LitElement {
       const data = [];
       let max = 0;
 
-      for (let i = minutes -1; i >= 0; i--) {
+      for (let i = minutes; i > 0; i--) {
         const mTime = new Date(now.getTime() - i * 60000);
         const key = mTime.toISOString().slice(0, 16);
         const wind = minuteMap[key]?.wind ?? 0;
