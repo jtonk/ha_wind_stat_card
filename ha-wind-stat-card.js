@@ -1,4 +1,3 @@
-// 123
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 import { repeat } from 'https://unpkg.com/lit/directives/repeat.js?module';
 
@@ -118,7 +117,6 @@ class HaWindStatCard extends LitElement {
       gustAvg.forEach(({ minute, avg }) => { minuteMap[minute] = { ...minuteMap[minute], gust: avg }; });
       dirAvg.forEach(({ minute, avg }) => { minuteMap[minute] = { ...minuteMap[minute], direction: avg }; });
 
-      console.log(minuteMap);
       
       const data = [];
       let max = 0;
@@ -213,6 +211,7 @@ class HaWindStatCard extends LitElement {
     if (this._noData || !Array.isArray(this._data)) {
       return html`<ha-card class="no-data">${this._error || 'No data available'}</ha-card>`;
     }
+    console.log(this._data);
     return html`
       <ha-card>
         <div class="graph" style="height:${this._config.graph_height}px">
