@@ -110,12 +110,16 @@ class HaWindStatCard extends LitElement {
       const windAvg = avgPerMinute(windHist);
       const gustAvg = avgPerMinute(gustHist);
       const dirAvg = avgVectorPerMinute(dirHist);
-
+      
+      
+      
       const minuteMap = {};
       windAvg.forEach(({ minute, avg }) => { minuteMap[minute] = { ...minuteMap[minute], wind: avg }; });
       gustAvg.forEach(({ minute, avg }) => { minuteMap[minute] = { ...minuteMap[minute], gust: avg }; });
       dirAvg.forEach(({ minute, avg }) => { minuteMap[minute] = { ...minuteMap[minute], direction: avg }; });
 
+      console.log(minuteMap);
+      
       const data = [];
       let max = 0;
 
