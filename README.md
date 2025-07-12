@@ -8,7 +8,7 @@ The card loads data through the Home Assistant history API and refreshes itself 
 
 - Fetches last N minutes of history (default: 30)
 - Stacked bars showing wind speed with gusts on top
-- Y‑axis from 0–60 kn with grid lines every 5 kn (only up to current max gust)
+- Y‑axis from 0–60 kn with grid lines every 5 kn (graph height rounded up to the next 5 kn)
 - Auto refreshes once per minute and shows the last updated time
 - Direction arrows for each minute showing averaged wind direction
 - Works with three sensors configured in YAML:
