@@ -172,7 +172,7 @@ class HaWindStatCard extends LitElement {
       "#ffe100", "#ffc800", "#ffaf00", "#ff9600", "#e67d00", "#e66400", "#dc4a1d",
       "#c8321d", "#b4191d", "#aa001d", "#b40032", "#c80064", "#fe0096"
     ];
-    const index = Math.min(wsColors.length, Math.floor(speed / 2));
+    const index = Math.min(wsColors.length - 1, Math.floor(speed / 2));
     return wsColors[index];
   }
 
@@ -181,7 +181,7 @@ class HaWindStatCard extends LitElement {
     const current = Array.isArray(this._data)
       ? [...this._data]
       : newData.map(() => ({ wind: 0, gust: 0, direction: 0 }));
-    for (let i = newData.length; i >= 0; i--) {
+    for (let i = newData.length - 1; i >= 0; i--) {
       current[i] = newData[i];
       this._data = [...current];
       await new Promise(res => setTimeout(res, 50));
@@ -305,7 +305,7 @@ class HaWindStatCard extends LitElement {
     .date-wind-bar-segment,
     .date-gust-bar-segment {
       display: inline-block;
-      transition: height 0.3s ease, margin-bottom 0.6s ease, background-color 0.3s ease;
+      transition: height 0.6s ease, margin-bottom 0.6s ease, background-color 0.6s ease;
     }
     .footer {
       text-align: right;
