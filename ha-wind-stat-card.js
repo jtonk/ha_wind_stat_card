@@ -305,7 +305,7 @@ class HaWindStatCard extends LitElement {
     .date-wind-bar-segment,
     .date-gust-bar-segment {
       display: inline-block;
-      transition: height 0.6s ease, margin-bottom 0.6s ease, background-color 0.6s ease;
+      transition: height 0.3s ease, margin-bottom 0.6s ease, background-color 0.3s ease;
     }
     .footer {
       text-align: right;
