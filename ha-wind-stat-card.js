@@ -190,7 +190,7 @@ class HaWindStatCard extends LitElement {
 
   _renderBar({ wind, gust, direction }) {
     const auto = this._config.autoscale !== false;
-    const scale = Math.max(5, Math.ceil((this._maxGust || 1) / 5) * 5);
+    const scale = this._maxGust || 1;
     const height = this._config.graph_height;
     const multiplier = this._config.multiplier ?? 1;
 
@@ -230,16 +230,12 @@ class HaWindStatCard extends LitElement {
         <div class="graph" style="height:${this._config.graph_height}px">
           <div class="overlay-lines">
             ${(() => {
-              const scale = Math.max(5, Math.ceil((this._maxGust || 1) / 5) * 5);
+              const scale = this._maxGust || 1;
               const lines = [];
               const auto = this._config.autoscale !== false;
               const multiplier = this._config.multiplier ?? 1;
               for (let v = 5; v <= scale; v += 5) {
-                const pos = auto ? (v / scale) * 100 + '%' : v * multiplier + 'px';
-                lines.push(html`
-                  <div class="h-line" style="bottom:${pos}">
-                    <span class="h-line-label">${v} kn</span>
-                  </div>`);
+                lines.push(html`<div class="h-line" style="bottom:${auto ? (v / scale) * 100 + '%' : v * multiplier + 'px'}"></div>`);
               }
               return lines;
             })()}
@@ -303,15 +299,8 @@ class HaWindStatCard extends LitElement {
       position: absolute;
       left: 0;
       width: 100%;
-      border-top: 1px solid var(--card-background-color);
-    }
-    .h-line-label {
-      position: absolute;
-      right: 0;
-      top: -8px;
-      font-size: 8px;
-      color: var(--secondary-text-color);
-      padding-right: 2px;
+      height: 1px;
+      background: var(--card-background-color);
     }
     .date-wind-bar-segment,
     .date-gust-bar-segment {
