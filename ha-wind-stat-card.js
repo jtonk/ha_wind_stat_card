@@ -144,7 +144,7 @@ class HaWindStatCard extends LitElement {
         const windFinal = Math.min(60, Math.max(0, windRaw));
         const direction = dirRaw;
       
-        max = Math.max(max, gustFinal);
+        max = Math.max(max, Math.ceil(gustFinal / 5) * 5);
         data.push({ wind: windFinal, gust: gustFinal, direction });
       }
 
