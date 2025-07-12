@@ -287,7 +287,7 @@ class HaWindStatCard extends LitElement {
       display: flex;
       flex-direction: column-reverse;
       align-items: stretch;
-      transition: height 0.3s ease;
+      transition: height 0.6s ease;
     }
     .dir-icon {
       position: absolute;
@@ -305,7 +305,7 @@ class HaWindStatCard extends LitElement {
     .date-wind-bar-segment,
     .date-gust-bar-segment {
       display: inline-block;
-      transition: height 0.3s ease, margin-bottom 0.6s ease, background-color 0.3s ease;
+      transition: height 0.6s ease, margin-bottom 0.6s ease, background-color 0.6s ease;
     }
     .footer {
       text-align: right;
