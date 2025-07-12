@@ -65,6 +65,9 @@ class HaWindStatCard extends LitElement {
         `history/period/${start}?end_time=${end}&filter_entity_id=${ids}&minimal_response`
       );
 
+      // Logging the raw history data
+      console.log('[ha-wind-stat-card] Raw history data:', hist);
+
       const windHist = hist.find(h => Array.isArray(h) && h[0]?.entity_id === this._config.wind_entity) ?? [];
       const gustHist = hist.find(h => Array.isArray(h) && h[0]?.entity_id === this._config.gust_entity) ?? [];
       const dirHist = hist.find(h => Array.isArray(h) && h[0]?.entity_id === this._config.direction_entity) ?? [];
@@ -145,6 +148,8 @@ class HaWindStatCard extends LitElement {
         data.push({ wind: windFinal, gust: gustFinal, direction });
       }
 
+      // Log the processed data before animation
+      console.log('[ha-wind-stat-card] Processed input this._data:', data);
 
       if (this._initialLoad) {
         this._data = data.map(() => ({ wind: 0, gust: 0, direction: 0 }));
